@@ -1,0 +1,27 @@
+{
+  "name": "Observability Lab",
+  "image": "mcr.microsoft.com/devcontainers/python:3-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml" 
+      ]
+    }
+  },
+  "forwardPorts": [9090, 3000, 9093, 5000],
+  "portsAttributes": {
+    "9090": { "label": "Prometheus UI" },
+    "3000": { "label": "Grafana UI" },
+    "5000": { "label": "Python App" },
+    "9093": { "label": "Alertmanager" }
+  },
+  "postCreateCommand": "pip install prometheus-client flask"
+}
