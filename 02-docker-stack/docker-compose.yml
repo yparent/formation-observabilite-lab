@@ -16,6 +16,7 @@ services:
       - "9090:9090"
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/alert_rules.yml:/etc/prometheus/alert_rules.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
@@ -36,16 +37,39 @@ services:
     image: prom/node-exporter:latest
     ports:
       - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
     networks:
       - monitoring
 
-  # 5. Alertmanager (Gestion alertes - J3)
+  # 5. Alertmanager (Gestion alertes)
   alertmanager:
     image: prom/alertmanager:latest
     ports:
       - "9093:9093"
     volumes:
       - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - monitoring
+
+  # 6. Blackbox Exporter (Sondes externes - J2)
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    ports:
+      - "9115:9115"
+    networks:
+      - monitoring
+
+  # 7. Pushgateway (Batch jobs - J2)
+  pushgateway:
+    image: prom/pushgateway:latest
+    ports:
+      - "9091:9091"
     networks:
       - monitoring
 
