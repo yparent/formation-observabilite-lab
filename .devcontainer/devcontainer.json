@@ -16,12 +16,13 @@
       ]
     }
   },
-  "forwardPorts": [9090, 3000, 9093, 5000],
+  "forwardPorts": [9090, 3000, 9093, 5000, 9091],
   "portsAttributes": {
     "9090": { "label": "Prometheus UI" },
     "3000": { "label": "Grafana UI" },
     "5000": { "label": "Python App" },
-    "9093": { "label": "Alertmanager" }
+    "9093": { "label": "Alertmanager" },
+    "9091": { "label": "Pushgateway" }
   },
-  "postCreateCommand": "pip install prometheus-client flask"
+  "postCreateCommand": "apt-get update && apt-get install -y stress iputils-ping && pip install prometheus-client flask"
 }
