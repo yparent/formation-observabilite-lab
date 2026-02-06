@@ -1,0 +1,4 @@
+groups:
+  - name: "alertes_generales"
+    rules:
+      # Les règles seront ajoutées par les stagiaires durant le TP
