@@ -1,6 +1,6 @@
 {
   "name": "Observability Lab",
-  "image": "mcr.microsoft.com/devcontainers/python:3-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/python:3-bullseye",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
