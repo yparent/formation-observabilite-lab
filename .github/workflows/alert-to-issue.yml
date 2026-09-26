@@ -1,0 +1,46 @@
+# Jour 3 — ChatOps avec GitHub : une alerte ouvre (ou commente) une issue.
+#
+# Déclenché par un appel repository_dispatch envoyé par Grafana (contact point Webhook
+# avec payload personnalisé) ou par Alertmanager (webhook_configs + payload).
+#
+# Exemple d'appel :
+#   curl -X POST https://api.github.com/repos/yparent/formation-observabilite-lab/dispatches \
+#     -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+#     -d '{"event_type":"alert","client_payload":{"alertname":"ShopHighErrorRate","status":"firing","summary":"Taux d erreur élevé","severity":"critical"}}'
+name: Alerte vers issue GitHub
+
+on:
+  repository_dispatch:
+    types: [alert]
+
+permissions:
+  issues: write
+
+jobs:
+  issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Créer ou commenter l'issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const p = context.payload.client_payload || {};
+            const title = `[${(p.status || 'firing').toUpperCase()}] ${p.alertname || 'Alerte'}`;
+            const body = [
+              `**Sévérité** : ${p.severity || 'n/a'}`,
+              `**Résumé** : ${p.summary || ''}`,
+              `**Instance** : ${p.instance || ''}`,
+              '', `_Reçu le ${new Date().toISOString()}_`
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'alerte'
+            });
+            const existing = issues.find(i => i.title.includes(p.alertname || '§'));
+            if (existing) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body });
+              if ((p.status || '') === 'resolved') {
+                await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, state: 'closed' });
+              }
+            } else if ((p.status || 'firing') === 'firing') {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['alerte'] });
+            }

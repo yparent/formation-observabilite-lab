@@ -1,0 +1,10 @@
+# CORRIGÉ TP 9 (bonus) — authentification basique sur Prometheus
+# À déposer dans prometheus/web.yml, puis ajouter au service prometheus (docker-compose.yml) :
+#   - --web.config.file=/etc/prometheus/web.yml
+# et : docker compose up -d prometheus
+#
+# Le mot de passe est "formation" (hash bcrypt). Pour générer le vôtre :
+#   htpasswd -nBC 10 "" | tr -d ':\n'      (Apache utils)
+#   python3 -c "import bcrypt; print(bcrypt.hashpw(b'monmotdepasse', bcrypt.gensalt(10)).decode())"
+basic_auth_users:
+  admin: $2b$10$3wlDJ8unzqCKCH.k2lW4Mu3KNMCxsdufq6qqSkz/O7CRGj5tTT.m6
