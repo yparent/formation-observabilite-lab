@@ -20,8 +20,9 @@ Formateur : Yohan Parent · Dépôt : https://github.com/yparent/formation-obser
 | 16h50 | Provisioning, utilisateurs, droits — exercices 2.30 à 2.33 |
 | 17h20 | Récap, quiz |
 
-Avant de commencer : `./lab.sh status`, et dans Prometheus **Status → Target health**, les sept
-jobs d'hier doivent être UP.
+Avant de commencer : `./lab.sh up` puis `./lab.sh status`, et dans Prometheus **Status → Target
+health**, les six jobs d'hier (`prometheus`, `node`, `shop-api`, `redis`, `blackbox-http`,
+`pushgateway`) doivent être UP.
 
 ---
 
@@ -353,7 +354,7 @@ multi-valeur avec All :
 
 | # | Panel | Visualisation | Indications |
 |---|---|---|---|
-| 1 | Chiffre d'affaires / heure | Stat | `rate(shop_revenue_euros_total) * 3600`, unité *Currency → Euro*, 0 décimale, sparkline (*Graph mode : Area*), couleur verte |
+| 1 | Chiffre d'affaires / heure | Stat | `rate(shop_revenue_euros_total[$__rate_interval]) * 3600`, unité *Currency → Euro*, 0 décimale, sparkline (*Graph mode : Area*), couleur verte |
 | 2 | Commandes (dernière heure) | Stat | `increase(...[1h])` sommé, Instant |
 | 3 | Articles dans les paniers | Stat | `sum(shop_cart_items{...})`, sparkline |
 | 4 | Commandes par moyen de paiement | Pie chart | donut, `increase(shop_orders_total[$__range])` par `payment_method`, légende à droite avec pourcentages |

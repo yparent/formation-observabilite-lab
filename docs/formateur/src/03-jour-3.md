@@ -3,12 +3,12 @@
 Objectif de la journée : le matin, les stagiaires écrivent des alertes qui ne réveillent que
 pour de bonnes raisons et les routent vers Teams, Slack et une boîte de réception. L'après-midi,
 alerting Grafana, exploitation de Prometheus (performance, sauvegarde, sécurité), passage à
-l'échelle, et un war game pour finir.
+l'échelle avec un vrai Thanos monté brique par brique, et un war game pour finir.
 
 | Heure | Séquence | Durée |
 |---|---|---|
-| 9h00 | Rappel du jour 2, quiz flash | 10 min |
-| 9h10 | Module 11 — Philosophie de l'alerting et règles Prometheus | 30 min |
+| 9h00 | Rappel du jour 2 + Exercice 3.0 — Brancher l'Alertmanager (brique 6) | 15 min |
+| 9h15 | Module 11 — Philosophie de l'alerting et règles Prometheus | 25 min |
 | 9h40 | Module 12 — Alertmanager | 25 min |
 | 10h05 | TP 6 — Alertes Prometheus et routage Alertmanager | 55 min |
 | 11h00 | Pause | 15 min |
@@ -17,23 +17,46 @@ l'échelle, et un war game pour finir.
 | 12h30 | Déjeuner | |
 | 14h00 | Module 14 — Alerting Grafana | 25 min |
 | 14h25 | TP 8 — Alerting Grafana, de l'interface au code | 45 min |
-| 15h10 | Module 15 — Performances, limites, bonnes pratiques + exercices 3.1 à 3.5 | 35 min |
-| 15h45 | Pause | 15 min |
-| 16h00 | TP 9 — Sauvegarde, restauration, remote write, sécurité | 45 min |
-| 16h45 | Module 16 — Mise à l'échelle et écosystème | 20 min |
-| 17h05 | War game + évaluation finale | 25 min |
+| 15h10 | Module 15 — Performances, limites, bonnes pratiques + exercices 3.1 à 3.5 | 25 min |
+| 15h35 | TP 9 — Sauvegarde, restauration, sécurité | 30 min |
+| 16h05 | Pause | 10 min |
+| 16h15 | Module 16 — Mise à l'échelle et écosystème | 10 min |
+| 16h25 | TP 10 — Thanos : historique long et vue globale (brique 7) | 50 min |
+| 17h15 | War game + évaluation finale | 15 min |
 
 ---
 
-## 9h00 — Rappel (10 min)
+## 9h00 — Rappel et exercice 3.0 (15 min)
 
 Quiz flash. Vérification que `recording.yml` est en place chez tout le monde (les alertes du
 matin s'appuient dessus pour certaines) et que le dashboard TP 5 est là (on va le regarder
 pendant les pannes).
 
+### Exercice 3.0 — Brancher l'Alertmanager (10 min)
+
+**Ce que je dis.** Depuis le jour 1, Prometheus évalue déjà une règle d'alerte (`TargetDown`, dans
+`rules/alerts.yml`) mais il n'a personne à qui l'envoyer. On ajoute la brique.
+
+**Énoncé.**
+1. Dans `docker-compose.yml`, décommentez `compose/06-alerting.yml`. Lisez-le : deux services.
+   `./lab.sh up`, `./lab.sh status`. Ouvrez http://localhost:9093 et http://localhost:8080.
+2. Prometheus ne connaît toujours pas l'Alertmanager : dans `prometheus/prometheus.yml`,
+   décommentez le bloc `alerting` (cible `alertmanager:9093`). Validez, rechargez.
+3. Vérifiez dans Prometheus, **Status → Alertmanager discovery** : une cible active.
+4. Ouvrez `alertmanager/alertmanager.yml` : il est minimal, un seul receiver vers l'Inbox. C'est
+   lui qu'on va enrichir au TP 6.
+
+**Corrigé.** Le service `inbox` est une petite application du dépôt qui joue Teams, Slack et
+PagerDuty : tout ce qu'Alertmanager enverra pendant la journée arrive sur http://localhost:8080.
+Sans le bloc `alerting`, une alerte passe *firing* dans Prometheus et ne va nulle part ; on le
+voit avec `prometheus_notifications_sent_total` qui reste à zéro.
+
+**Ce que je vérifie.** Tout le monde a une cible sur la page *Alertmanager discovery*. Ceux qui
+ont oublié le reload voient la page vide.
+
 ---
 
-## Module 11 — Philosophie de l'alerting et règles Prometheus (30 min)
+## Module 11 — Philosophie de l'alerting et règles Prometheus (25 min)
 
 **Objectif.** Savoir ce qui mérite une alerte, et écrire une règle propre.
 
@@ -646,7 +669,7 @@ C'est plus brutal qu'Alertmanager, qui garde l'ancienne config.
 
 ---
 
-## Module 15 — Performances, limites, bonnes pratiques (35 min)
+## Module 15 — Performances, limites, bonnes pratiques (25 min, exercices compris)
 
 **Objectif.** Savoir dimensionner, diagnostiquer un Prometheus qui souffre, et déployer proprement.
 
@@ -664,8 +687,8 @@ démarrage : c'est pour ça qu'un gros Prometheus met plusieurs minutes à redé
 deux heures, le head est écrit en **bloc** immuable (`01M3E7...` : chunks, index, meta.json,
 tombstones). Les blocs sont ensuite **compactés** en blocs plus gros (jusqu'à 10 % de la
 rétention). La rétention (`--storage.tsdb.retention.time` et/ou `.size`) supprime les blocs
-entiers. Supprimer des séries ciblées : l'API admin `delete_series` + `clean_tombstones`, et
-Prometheus 3.14 a ajouté une page dans l'interface pour ça.
+entiers. Supprimer des séries ciblées : l'API admin `delete_series` + `clean_tombstones`
+(`--web.enable-admin-api`, que le lab active).
 
 **Les séries périmées (staleness).** Quand une série disparaît d'un scrape, Prometheus écrit un
 marqueur et la série disparaît des requêtes instantanées après 5 min. Une série qui change de
@@ -707,7 +730,7 @@ série à chaque fois : c'est le *churn*, second tueur après la cardinalité.
 - **Conventions** : nommage des métriques, labels `env`/`team`/`service` partout (via
   `external_labels` ou relabeling), un runbook par alerte, des tests de règles en CI.
 
-### Exercices 3.1 à 3.5 — Diagnostic (15 min)
+### Exercices 3.1 à 3.5 — Diagnostic (10 min)
 
 **3.1** — Combien de séries actives ? Quelle métrique en a le plus ? Quel label a le plus de
 valeurs distinctes ? (TSDB status et requêtes)
@@ -735,15 +758,15 @@ recording rule quelques dizaines.*
 
 ---
 
-## TP 9 — Sauvegarde, restauration, longue durée, sécurité (45 min)
+## TP 9 — Sauvegarde, restauration, sécurité (30 min)
 
-**Objectif.** Sauvegarder et restaurer Prometheus et Grafana, envoyer les métriques importantes
-vers un stockage longue durée, protéger Prometheus par mot de passe.
+**Objectif.** Sauvegarder et restaurer Prometheus et Grafana, protéger Prometheus par mot de passe.
 
 **Mise en situation.** Un audit demande : « si le serveur de monitoring brûle, en combien de
-temps le remettez-vous ? Et avez-vous 13 mois d'historique ? Et qui peut lire vos métriques ? »
+temps le remettez-vous ? Et qui peut lire vos métriques ? » (La troisième question de l'audit,
+« avez-vous 13 mois d'historique ? », c'est le TP 10.)
 
-### Partie 1 — Snapshot et restauration de Prometheus (15 min)
+### Partie 1 — Snapshot et restauration de Prometheus (12 min)
 
 **Énoncé.**
 1. `./lab.sh snapshot` (appelle `POST /api/v1/admin/tsdb/snapshot`, possible grâce à
@@ -771,7 +794,7 @@ suppression du snapshot local. Alternative : sauvegarder `data/` directement à 
 arrêté) ou avec un snapshot du volume (LVM, EBS). Ne jamais copier `data/` à chaud sans snapshot :
 le WAL bouge.
 
-### Partie 2 — Sauvegarde de Grafana (10 min)
+### Partie 2 — Sauvegarde de Grafana (8 min)
 
 **Énoncé.**
 1. Où est la base de Grafana ? Copiez-la : `docker compose cp grafana:/var/lib/grafana/grafana.db ./grafana-backup.db`.
@@ -795,29 +818,7 @@ D'où : soit on sauvegarde la base (SQLite : copie à chaud acceptable avec `sql
 avec Grafana arrêté ; PostgreSQL : `pg_dump`), soit, et c'est la bonne réponse, **tout est provisionné et la
 sauvegarde, c'est Git**. La base ne contient alors que de l'état reconstructible.
 
-### Partie 3 — Remote write vers un Prometheus longue durée (10 min)
-
-**Énoncé.**
-1. `./lab.sh longterm` démarre un second Prometheus (port 9095) avec 90 jours de rétention et le
-   récepteur remote write activé.
-2. Ajoutez à `prometheus.yml` un bloc `remote_write` vers `http://prometheus-longterm:9090/api/v1/write`
-   qui n'envoie **que** les métriques métier (`shop_*`), les recording rules (`job:*`,
-   `instance:*`, `route:*`) et `up`. Validez, rechargez.
-3. Après une minute, sur http://localhost:9095 : quelles métriques sont présentes ? Combien de
-   séries ? Comparez avec le Prometheus principal.
-4. `prometheus_remote_storage_samples_total`, `prometheus_remote_storage_samples_failed_total`,
-   `prometheus_remote_storage_highest_timestamp_in_seconds - prometheus_remote_storage_queue_highest_sent_timestamp_seconds`
-   (le retard).
-
-**Corrigé.** `solutions/jour-3/prometheus-remote-write.yml`. Une quinzaine de noms de métriques
-côté longue durée (`count(count by (__name__) ({__name__=~".+"}))`) contre plus de 800 côté
-principal. C'est le pattern : du brut local avec une rétention courte,
-de l'agrégé envoyé au loin avec une rétention longue. Le récepteur remote write d'un Prometheus
-est pratique pour un lab ou un petit site ; en production, la cible est Mimir, Thanos Receive,
-VictoriaMetrics ou un service managé (module 16). Remote Write 2.0 (Prometheus 3) réduit nettement la
-bande passante (chaînes internées, compression) et transporte métadonnées et native histograms.
-
-### Partie 4 — Un mot de passe sur Prometheus (bonus, 10 min)
+### Partie 3 — Un mot de passe sur Prometheus (10 min)
 
 **Énoncé.**
 1. Créez `prometheus/web.yml` avec `basic_auth_users` : utilisateur `admin`, mot de passe
@@ -829,15 +830,15 @@ bande passante (chaînes internées, compression) et transporte métadonnées et
 
 **Corrigé.** `solutions/jour-3/web.yml`. Ce qui casse : Grafana (source de données → *Basic auth*
 à activer avec les identifiants, ou dans le provisioning `basicAuth: true`, `basicAuthUser`,
-`secureJsonData.basicAuthPassword`), `./lab.sh reload` (ajouter `-u admin:formation`), le
-Prometheus longue durée si on lui avait mis un mot de passe aussi (`basic_auth` dans `remote_write`),
-et Alertmanager ne parle pas à Prometheus, donc rien de ce côté. Leçon : la sécurité se fait au
-début, pas à la fin. On retire le `web.config.file` avant le war game pour ne pas se compliquer la
-vie.
+`secureJsonData.basicAuthPassword`), `./lab.sh reload` (ajouter `-u admin:formation`), et le
+sidecar Thanos du TP 10 si on le laissait en place (`--prometheus.http-client` avec les
+identifiants). Alertmanager ne parle pas à Prometheus, donc rien de ce côté. Leçon : la sécurité
+se fait au début, pas à la fin. On **retire** le `web.config.file` à la fin du TP : le TP 10 et le
+war game se font sans mot de passe.
 
 ---
 
-## Module 16 — Mise à l'échelle et écosystème (20 min)
+## Module 16 — Mise à l'échelle et écosystème (10 min)
 
 **Objectif.** Savoir quoi faire quand un Prometheus ne suffit plus, et où va l'écosystème.
 
@@ -854,15 +855,19 @@ HA « vraie » (pas de trou pendant un redémarrage) → duo de Prometheus, ou s
 2. **Fédération** : un Prometheus central qui scrape `/federate` de Prometheus régionaux (avec un
    `match[]` sur des recording rules agrégées). Ancien, limité, mais suffisant pour une vue globale
    légère.
-3. **Remote write vers un stockage distribué** :
-    - **Grafana Mimir** (issu de Cortex) : horizontalement scalable, multi-tenant, stockage objet,
-      c'est le moteur de Grafana Cloud.
-    - **Thanos** : sidecar à côté de chaque Prometheus, blocs envoyés en stockage objet, un
-      *Querier* global, déduplication, downsampling. Très répandu, plus de composants.
-    - **VictoriaMetrics** : simple à opérer, très économe, PromQL étendu (MetricsQL). Version
-      single-node ou cluster.
+3. **Un stockage longue durée au-dessus des Prometheus** :
+    - **Thanos** : un *sidecar* à côté de chaque Prometheus envoie ses blocs dans un stockage
+      objet (S3, GCS, Azure Blob...), un *Store Gateway* les relit, un *Querier* interroge tout le
+      monde avec une seule API Prometheus et déduplique les réplicas, un *Compactor* fusionne les
+      blocs et calcule des résolutions dégradées (downsampling). Les Prometheus restent tels
+      qu'ils sont : c'est ce qu'on monte au TP 10.
+    - **Grafana Mimir** (issu de Cortex) : les Prometheus envoient en remote write, Mimir stocke
+      et sert ; horizontalement scalable, multi-tenant, c'est le moteur de Grafana Cloud.
+    - **VictoriaMetrics** : remote write aussi, simple à opérer, très économe, PromQL étendu
+      (MetricsQL). Version single-node ou cluster.
 
-    Les trois exposent une API compatible Prometheus : Grafana ne voit pas la différence.
+    Les trois exposent une API compatible Prometheus : Grafana ne voit pas la différence. Thanos a
+    aussi un mode *Receive* (remote write) ; Mimir et VictoriaMetrics n'ont pas de sidecar.
 4. **Managé** : Grafana Cloud, Amazon Managed Prometheus, Google Managed Prometheus, Azure Monitor
    managed Prometheus.
 
@@ -883,14 +888,155 @@ tout en un `helm install`. Tout ce qu'on a vu s'applique ; la découverte de ser
 
 ### Ce que je montre
 
-Le schéma du deck : Prometheus locaux → remote write → Mimir/Thanos/VictoriaMetrics → Grafana.
-Et les liens de l'annexe C.
+Le schéma Thanos du deck, qu'on va construire dans les cinquante minutes qui suivent. Et les
+liens de l'annexe C.
+
+![L'architecture Thanos du lab](../../diagrams/thanos.png)
 
 ---
 
-## 17h05 — War game et évaluation finale (25 min)
+## TP 10 — Thanos : historique long et vue globale (50 min)
 
-**Le war game (15 min).** Les stagiaires ne touchent plus à la configuration. Je casse la boutique
+**Objectif.** Monter un Thanos complet au-dessus de deux Prometheus, voir les blocs partir vers
+un stockage objet, interroger les deux Prometheus d'une seule requête, et brancher Grafana dessus.
+
+**Mise en situation.** La boutique ouvre un second site. Chaque site a son Prometheus (rétention
+15 jours). L'audit veut 13 mois d'historique et une vue globale, sans toucher aux Prometheus
+existants.
+
+**Ce que je dis avant de lancer.** Tout tient dans une brique, `compose/07-thanos.yml`, et tout
+tourne dans le Codespace (six conteneurs de plus, environ 400 Mo de RAM ; ceux qui sont sur leur
+machine avec Docker Desktop ont la même chose). Le « stockage objet » du lab est un dossier
+partagé (`type: FILESYSTEM` dans `thanos/objstore.yml`) : le même fichier pointerait sur S3, GCS ou
+Azure en production, rien d'autre ne change. Une seule modification sur le Prometheus existant,
+et elle est obligatoire : un sidecar qui envoie des blocs exige que la compaction locale soit
+désactivée, c'est-à-dire `min-block-duration` égal à `max-block-duration` (c'est le Compactor de
+Thanos qui compacte, dans le bucket). En production on met 2 h, la valeur par défaut du minimum ;
+dans le lab on met 10 minutes pour voir les envois pendant le TP. Ceux qui sont sous Docker Desktop **Windows** : le TP marche aussi, simplement les
+conteneurs Thanos tournent en `root` (droits sur le volume partagé), ce qu'on ne ferait pas en
+production.
+
+### Partie 1 — Lire l'architecture et lancer (10 min)
+
+**Énoncé.**
+1. Ouvrez `compose/07-thanos.yml` et repérez, pour chaque service, son rôle et à qui il parle :
+   `thanos-sidecar-a`, `prometheus-b`, `thanos-sidecar-b`, `thanos-store`, `thanos-query`,
+   `thanos-compact`. Quel volume est partagé par qui ?
+2. Ouvrez `thanos/prometheus-b.yml` : qu'est-ce qui diffère du Prometheus principal ? Pourquoi les
+   deux ont-ils un `external_labels.replica` différent ?
+3. Dans `compose/01-prometheus.yml`, décommentez les deux flags `--storage.tsdb.*-block-duration=10m`.
+4. Dans `docker-compose.yml`, décommentez `compose/07-thanos.yml`. `./lab.sh up`, `./lab.sh status` :
+   six conteneurs de plus, tous `Up`. Notez l'heure.
+
+**Corrigé.** Le volume `prometheus-data` est partagé entre `prometheus` et son sidecar (le sidecar
+lit la TSDB en place, en lecture seule dans les faits) ; `thanos-bucket` est le « bucket »,
+partagé entre les deux sidecars, le store et le compactor. `prometheus-b` scrape les mêmes cibles
+(`shop-api`, `node`) avec `replica: prom-2`. Les `external_labels` sont **la** clé de Thanos : ils
+identifient l'origine de chaque bloc dans le bucket, et `replica` est le label que le Querier
+saura ignorer pour dédupliquer. Deux Prometheus sans `external_labels` distincts, et Thanos
+refuse de démarrer. Le changement de taille de bloc redémarre Prometheus (`./lab.sh up` le
+recrée) : l'historique est conservé, il a simplement des blocs de 2 h derrière et de 10 min devant.
+Dans le compose, `--endpoint=` est marqué déprécié par Thanos 0.42 au profit de `--endpoint.sd-config`
+(un fichier de découverte) ; il fonctionne toujours, et il est plus lisible pour un TP.
+
+### Partie 2 — Le Querier : une vue, deux Prometheus (12 min)
+
+**Énoncé.**
+1. http://localhost:10902 : c'est l'interface de Prometheus, à un détail près. **Stores** : que voyez-vous ?
+   Quels labels chaque *store* annonce-t-il ?
+2. Requête `up{job="shop-api"}`. Combien de séries ? Décochez **Use Deduplication** (en haut de la page).
+   Combien maintenant ? Expliquez.
+3. `count by (replica) (up)` sans déduplication, puis avec. Où est passé le label `replica` ?
+4. Arrêtez `prometheus-b` (`docker compose stop prometheus-b`) : `up{job="shop-api"}` avec
+   déduplication. Redémarrez-le. C'est la haute disponibilité selon Thanos : deux Prometheus qui
+   scrapent la même chose, un Querier qui fusionne.
+5. Le Prometheus principal a des métriques que `prometheus-b` n'a pas (Redis, Blackbox, Pushgateway).
+   `count(count by (__name__) ({__name__=~".+"}))` sur le Querier, sur Prometheus, sur Prometheus B.
+
+**Corrigé.** Trois stores : deux sidecars (avec leurs `external_labels`, et une fenêtre de temps
+qui commence au démarrage de chaque Prometheus) et le Store Gateway (vide pour l'instant, on y revient).
+Sans déduplication, 4 séries `up{job="shop-api"}` (2 instances × 2 réplicas), chacune avec son
+`replica` ; avec, 2 séries et le label `replica` a disparu : c'est `--query.replica-label=replica`
+dans le compose. Prometheus B arrêté, le Querier sert la donnée de prom-1 sans trou : les sidecars
+sont marqués *unhealthy* après quelques secondes mais la requête aboutit (avec un avertissement
+partiel si un store ne répond pas). L'union des métriques : le Querier expose tout ce qu'au moins
+un Prometheus connaît.
+
+### Partie 3 — Grafana sur Thanos (8 min)
+
+**Énoncé.**
+1. Ajoutez une source de données dans Grafana : type *Prometheus*, nom `Thanos`, URL
+   `http://thanos-query:10902`. Dans *Performance*, choisissez *Prometheus type* : **Thanos**. Sauvegardez
+   et testez. Version fichier : `grafana/provisioning/datasources/thanos.yml` (l'un ou l'autre).
+2. Ouvrez le dashboard TP 5 et, dans les réglages, changez la source de données du dashboard pour
+   `Thanos` (ou ajoutez une variable `datasource` de type *Data source*). Tout s'affiche-t-il ?
+3. Explore, source Thanos : `shop_orders_total`. Le label `replica` a disparu, `cluster` est resté.
+   Pourquoi garde-t-on `cluster` ?
+
+**Corrigé.** `solutions/jour-3/grafana-datasource-thanos.yml`. Le type *Thanos* dans Grafana active
+les options propres à Thanos (downsampling, dédup). Tout s'affiche : l'API est la même. Une variable
+`datasource` est la bonne pratique, elle permet de basculer un dashboard entre le Prometheus local et
+la vue globale sans le dupliquer. `cluster` reste parce qu'il **distingue** des données différentes
+(deux sites, ce seraient deux valeurs) ; `replica` distingue deux copies de la **même** donnée.
+C'est exactement la différence entre un label qu'on garde et un label qu'on déduplique.
+
+### Partie 4 — Le bucket, le Store Gateway et le Compactor (15 min)
+
+**Énoncé.** À faire quinze minutes au moins après le lancement de la partie 1 (le premier bloc
+vient du Prometheus principal, qui découpe son head existant ; `prometheus-b`, dont la TSDB est
+neuve, met 15 à 20 minutes à produire le sien).
+1. `docker compose exec thanos-store ls -la /bucket` : des dossiers au nom bizarre (des ULID).
+   Ouvrez le `meta.json` de l'un d'eux (`cat /bucket/<ULID>/meta.json`) : de qui vient ce bloc ? quelle
+   période couvre-t-il ? Côté sidecar, les compteurs d'envoi se lisent sur son `/metrics` (Thanos
+   n'est pas scrapé dans le lab) :
+   `docker compose exec thanos-sidecar-a wget -qO- localhost:10902/metrics | grep thanos_shipper_uploads`.
+2. Sur le Querier, **Stores** : le Store Gateway annonce maintenant une fenêtre de temps et des labels.
+   Lesquels ?
+3. Les logs du compactor : `docker compose logs thanos-compact | tail -20`. Que fait-il ? Il attend
+   (flag `--wait`) : quelle rétention a-t-on configurée pour chaque résolution ?
+4. Discussion : que se passe-t-il quand `prometheus` supprime un bloc localement au bout de 15 jours ?
+   D'où vient la donnée d'il y a 6 mois quand Grafana la demande ? Et celle d'il y a 2 minutes ?
+
+**Corrigé.** Chaque bloc est un dossier ULID avec `meta.json` (labels d'origine dont `replica`,
+`minTime`/`maxTime`, source `sidecar`), `index` et `chunks/`. Le sidecar envoie chaque bloc terminé,
+d'où les blocs de 10 minutes. Le Store Gateway indexe le bucket et annonce ses `external_labels`
+et sa fenêtre, comme un sidecar ; le Querier le traite comme n'importe quel store. Le Compactor
+fusionne les petits blocs en gros blocs (par groupe de labels identiques), déduplique
+verticalement les réplicas si on le lui demande, et calcule les résolutions 5 min et 1 h (le
+downsampling ; `--query.auto-downsampling` sur le Querier choisit la bonne). Rétention configurée :
+brut 30 jours, 5 min 90 jours, 1 h un an : le « 13 mois d'historique » de l'audit, pour le prix
+d'un stockage objet. La donnée de 2 minutes vient des sidecars (le head de Prometheus n'est jamais
+dans le bucket) ; celle de 6 mois vient du Store Gateway ; celle d'il y a 3 heures peut venir des
+deux, et le Querier déduplique. Un seul processus a le droit d'écrire dans un groupe de blocs du
+bucket : **un** compactor par bucket, jamais deux.
+
+**Ce que je vérifie.** Que tout le monde a au moins un bloc dans `/bucket` avant de passer à la
+suite ; si le Codespace a été lancé tard, je montre le mien. Le piège du TP : oublier de
+décommenter les flags de la partie 1, étape 3. Sans eux, `thanos-sidecar-a` refuse de démarrer et
+boucle sur `Compaction needs to be disabled (storage.tsdb.min-block-duration =
+storage.tsdb.max-block-duration)` dans ses logs, le Querier ne voit que `prom-2`, et rien de
+`prom-1` n'arrive jamais dans le bucket. `docker compose logs thanos-sidecar-a` le dit en clair.
+
+### Partie 5 — Ranger (5 min)
+
+**Énoncé.** Le war game se fait sur la stack de ce matin. Recommentez `compose/07-thanos.yml` et les
+deux flags de `compose/01-prometheus.yml`, `./lab.sh up` (les conteneurs Thanos sont retirés par
+`docker compose up --remove-orphans`, que `lab.sh` passe pour vous). Vérifiez avec `./lab.sh status`.
+Les volumes restent : `./lab.sh reset` pour tout effacer, à la fin de la formation seulement.
+
+**Ce que je dis pour conclure.** Ce qu'on a fait en 50 minutes est une vraie architecture Thanos,
+la même qu'en production au nombre de réplicas et au stockage objet près. Ce qu'on n'a pas vu :
+Thanos *Receive* (les Prometheus poussent en remote write, pour les cas où le sidecar ne peut pas
+lire la TSDB, ou pour du multi-tenant), *Ruler* (évaluer des règles globales sur le Querier), la
+*Query Frontend* (cache et découpage des grosses requêtes), et le chiffrement/TLS entre composants.
+Mimir et VictoriaMetrics résolvent le même problème en remplaçant le stockage local des Prometheus
+plutôt qu'en le complétant ; le choix dépend surtout de ce que l'équipe sait opérer.
+
+---
+
+## 17h15 — War game et évaluation finale (15 min)
+
+**Le war game (10 min).** Les stagiaires ne touchent plus à la configuration. Je casse la boutique
 d'une façon qu'ils ne connaissent pas, en ciblant **une seule instance** (le script `lab.sh` casse
 les deux instances ; moi, je vise) :
 
@@ -908,7 +1054,7 @@ l'Inbox. Puis on débriefe : qui a trouvé quoi, avec quel outil, et surtout ce 
 
 Variante si le groupe est fort : ils écrivent l'alerte manquante avant de partir.
 
-**L'évaluation (10 min).** Le questionnaire de fin de formation reprend les questions du
+**L'évaluation (5 min).** Le questionnaire est rempli en ligne, la correction est envoyée le soir même. Le questionnaire de fin de formation reprend les questions du
 positionnement du jour 1 plus une dizaine de questions techniques (annexe A). Correction à l'oral,
 tout de suite.
 

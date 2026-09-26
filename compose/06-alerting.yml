@@ -1,0 +1,32 @@
+# Brique 6 — Alertmanager et la boîte de réception des notifications (exercice 3.0, jour 3)
+services:
+  alertmanager:
+    image: quay.io/prometheus/alertmanager:v0.34.1
+    container_name: alertmanager
+    restart: unless-stopped
+    ports: ["9093:9093"]
+    volumes:
+      - ../alertmanager:/etc/alertmanager
+      - ../alertmanager/amtool.yml:/etc/amtool/config.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://localhost:9093
+    networks: [monitoring]
+
+  # Reçoit les notifications à la place de Teams / Slack / PagerDuty : http://localhost:8080
+  inbox:
+    build: ../apps/inbox
+    image: formation/inbox:local
+    container_name: inbox
+    restart: unless-stopped
+    ports: ["8080:8080"]
+    networks: [monitoring]
+
+volumes:
+  alertmanager-data:
+
+networks:
+  monitoring:
+    name: formation-monitoring

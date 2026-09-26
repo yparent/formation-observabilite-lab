@@ -1,0 +1,6 @@
+# Configuration du "stockage objet" de Thanos.
+# Pour le lab : un simple dossier partagé entre les conteneurs (type FILESYSTEM).
+# En production : S3, GCS, Azure Blob, Swift, OVH Object Storage (compatible S3)...
+type: FILESYSTEM
+config:
+  directory: /bucket

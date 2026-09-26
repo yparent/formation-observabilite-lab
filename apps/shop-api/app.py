@@ -1,9 +1,11 @@
 """
 shop-api : l'application "fil rouge" de la formation.
 
-Une petite boutique en ligne (catalogue, panier, paiement) instrumentée avec
-prometheus_client. Elle sert de terrain de jeu pour les trois jours :
-- Jour 1 : lire /metrics, comprendre les 4 types, ajouter une métrique métier
+Une petite boutique en ligne (catalogue, panier, paiement). Elle est livrée à moitié
+instrumentée : quelques métriques existent déjà (un Counter, des Gauges, un Summary), le
+reste est à écrire pendant le TP 2
+(cherchez les TODO 1 à 5). Ensuite elle sert de terrain de jeu pour les trois jours :
+- Jour 1 : lire /metrics, comprendre les 4 types, instrumenter
 - Jour 2 : PromQL (rate, histogram_quantile, jointures) et dashboards
 - Jour 3 : alertes, chaos, diagnostic
 
@@ -45,12 +47,8 @@ HTTP_REQUESTS = Counter(
     "Nombre total de requêtes HTTP reçues",
     ["method", "route", "status"],
 )
-HTTP_DURATION = Histogram(
-    "http_request_duration_seconds",
-    "Durée de traitement des requêtes HTTP",
-    ["route"],
-    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
-)
+# --- TODO 1 : déclarer HTTP_DURATION, un Histogram "http_request_duration_seconds"
+#     (label "route", buckets de 5 ms à 10 s : 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
 HTTP_IN_PROGRESS = Gauge(
     "http_requests_in_progress",
     "Requêtes HTTP en cours de traitement",
@@ -59,39 +57,21 @@ HTTP_IN_PROGRESS = Gauge(
 # ---------------------------------------------------------------------------
 # Métriques métier (ce que le directeur commercial veut voir)
 # ---------------------------------------------------------------------------
-ORDERS = Counter(
-    "shop_orders_total",
-    "Commandes validées",
-    ["payment_method"],
-)
-REVENUE = Counter(
-    "shop_revenue_euros_total",
-    "Chiffre d'affaires cumulé en euros",
-)
+# --- TODO 2 : déclarer STOCK, une Gauge "shop_stock_units" (label "product")
 CART_ITEMS = Gauge(
     "shop_cart_items",
     "Articles actuellement dans les paniers (toutes sessions)",
 )
-STOCK = Gauge(
-    "shop_stock_units",
-    "Unités en stock par produit",
-    ["product"],
-)
+# --- TODO 3 : déclarer ORDERS, un Counter "shop_orders_total" (label "payment_method"),
+#     et REVENUE, un Counter "shop_revenue_euros_total" (sans label)
 PAYMENT_LATENCY = Summary(
     "shop_payment_duration_seconds",
     "Durée d'appel au prestataire de paiement (Summary : quantiles côté client)",
 )
-APP_INFO = Gauge(
-    "shop_app_info",
-    "Informations de version (valeur toujours 1, l'info est dans les labels)",
-    ["version", "instance_name"],
-)
-APP_INFO.labels(version=APP_VERSION, instance_name=INSTANCE_NAME).set(1)
+# --- TODO 4 : déclarer APP_INFO, une Gauge "shop_app_info" (labels "version", "instance_name")
+#     et la mettre à 1 avec APP_VERSION et INSTANCE_NAME (pattern "info metric")
 
-# --- TODO Jour 1 / TP 2 ---------------------------------------------------
-# Déclarer ici la métrique PRODUCT_VIEWS (Counter "shop_product_views_total",
-# label "product") puis l'incrémenter dans la route /api/products/<product>.
-# ---------------------------------------------------------------------------
+# --- TODO 5 : déclarer PRODUCT_VIEWS, un Counter "shop_product_views_total" (label "product")
 
 CHAOS_MODE = Gauge(
     "shop_chaos_mode",
@@ -110,8 +90,8 @@ PRODUCTS = {
     "webcam": 59.0,
     "dock-usb-c": 129.0,
 }
-for name in PRODUCTS:
-    STOCK.labels(product=name).set(random.randint(40, 120))
+stock = {name: random.randint(40, 120) for name in PRODUCTS}   # l'état "réel" du stock
+# TODO 2 (suite) : initialiser la gauge STOCK pour chaque produit à partir du dict stock
 
 chaos = {"latency": False, "errors": False, "leak": False}
 for mode in chaos:
@@ -150,7 +130,7 @@ def _observe(response):
     HTTP_IN_PROGRESS.dec()
     route = request.url_rule.rule if request.url_rule else "unmatched"
     elapsed = time.perf_counter() - getattr(request, "_start", time.perf_counter())
-    HTTP_DURATION.labels(route=route).observe(elapsed)
+    # TODO 1 (suite) : observer "elapsed" dans HTTP_DURATION pour cette route
     HTTP_REQUESTS.labels(
         method=request.method, route=route, status=str(response.status_code)
     ).inc()
@@ -216,9 +196,9 @@ def product_detail(product):
         return failed
     if product not in PRODUCTS:
         return jsonify(error="produit inconnu"), 404
-    # TODO Jour 1 / TP 2 : incrémenter PRODUCT_VIEWS pour ce produit
+    # TODO 5 (suite) : incrémenter PRODUCT_VIEWS pour ce produit
     redis_incr(f"shop:views:{product}")
-    return jsonify(product=product, price=PRODUCTS[product], stock=STOCK.labels(product=product)._value.get())
+    return jsonify(product=product, price=PRODUCTS[product], stock=stock[product])
 
 
 @app.route("/api/cart", methods=["GET", "POST"])
@@ -249,9 +229,9 @@ def checkout():
     with PAYMENT_LATENCY.time():
         simulate_work(40, 60)
 
-    ORDERS.labels(payment_method=method).inc()
-    REVENUE.inc(PRODUCTS[product])
-    STOCK.labels(product=product).dec()
+    # TODO 3 (suite) : une commande de plus pour ce moyen de paiement, et le prix dans le CA
+    stock[product] -= 1
+    # TODO 2 (suite) : répercuter le nouveau stock dans la gauge STOCK
     current = CART_ITEMS._value.get()
     if current > 0:
         CART_ITEMS.dec(min(current, random.randint(1, 3)))
@@ -317,8 +297,9 @@ def background_tasks():
     while True:
         time.sleep(30)
         for name in PRODUCTS:
-            if STOCK.labels(product=name)._value.get() < 20:
-                STOCK.labels(product=name).inc(random.randint(30, 60))
+            if stock[name] < 20:
+                stock[name] += random.randint(30, 60)
+                # TODO 2 (suite) : mettre à jour la gauge STOCK après le réassort
         if chaos["leak"]:
             leak_bucket.append(bytearray(5 * 1024 * 1024))  # +5 Mo toutes les 30 s
 

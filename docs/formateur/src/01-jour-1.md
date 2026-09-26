@@ -1,24 +1,26 @@
 # Jour 1 — Voir : architecture et collecte
 
-Objectif de la journée : à 17h30, chaque stagiaire a une stack qui collecte des métriques
-système, des métriques applicatives et des métriques de services tiers, il sait lire un fichier
+Objectif de la journée : à 17h30, chaque stagiaire a construit lui-même, brique par brique,
+une stack qui collecte des métriques système, applicatives et de services tiers. Il a lancé
+Prometheus et Grafana en binaires avant de les mettre en conteneur, il sait lire un fichier
 `prometheus.yml` sans trembler, et il a écrit ses premières requêtes.
 
 | Heure | Séquence | Durée |
 |---|---|---|
 | 9h00 | Accueil, tour de table, cadrage | 30 min |
-| 9h30 | Module 1 — Pourquoi l'observabilité | 35 min |
-| 10h05 | Module 2 — Architecture de Prometheus et place de Grafana | 40 min |
-| 10h45 | Pause | 15 min |
-| 11h00 | Module 3 — Installation et prise en main + exercices 1.1 à 1.4 | 50 min |
-| 11h50 | Module 4 — Configuration + exercices 1.5 à 1.8 | 40 min |
+| 9h30 | Module 1 — Pourquoi l'observabilité | 30 min |
+| 10h00 | Module 2 — Architecture de Prometheus et place de Grafana | 35 min |
+| 10h35 | Pause | 15 min |
+| 10h50 | Module 3 — Installer à la main : exercices 1.1 à 1.4 (Prometheus puis Grafana en binaires) | 60 min |
+| 11h50 | Module 4 — Configuration : exercices 1.5 et 1.6 | 40 min |
 | 12h30 | Déjeuner | |
-| 14h00 | Module 5 — Les exporters | 30 min |
-| 14h30 | TP 1 — Node Exporter | 60 min |
-| 15h30 | Pause | 15 min |
-| 15h45 | Module 6 — Instrumenter son application | 30 min |
-| 16h15 | TP 2 — Instrumentation et services tiers | 60 min |
-| 17h15 | Récap, quiz, questions | 15 min |
+| 14h00 | Exercice 1.7 — Des binaires aux conteneurs (briques 1 et 2) | 20 min |
+| 14h20 | Module 5 — Les exporters | 25 min |
+| 14h45 | TP 1 — Node Exporter (brique 4) | 55 min |
+| 15h40 | Pause | 15 min |
+| 15h55 | Module 6 — Instrumenter son application | 25 min |
+| 16h20 | TP 2 — Application, instrumentation, services tiers (briques 3 et 5) | 60 min |
+| 17h20 | Récap, quiz, questions | 10 min |
 
 ---
 
@@ -51,7 +53,7 @@ sera rouge. « Voilà ce que vous saurez construire mercredi. »
 
 ---
 
-## Module 1 — Pourquoi l'observabilité (35 min)
+## Module 1 — Pourquoi l'observabilité (30 min)
 
 **Objectif.** Comprendre la différence entre monitoring et observabilité, situer les métriques
 parmi les autres signaux, et comprendre pourquoi Prometheus a gagné.
@@ -111,7 +113,7 @@ scrapé). On verra la Pushgateway au TP 2.
 source en 2015. Deuxième projet accueilli par la CNCF en 2016 après Kubernetes, gradué
 en 2018. Aujourd'hui, c'est le standard de fait : Kubernetes, Docker, la plupart des bases de
 données et des middlewares exposent nativement du format Prometheus. Version 3 sortie fin 2024 ;
-on travaille sur la 3.15 (septembre 2026).
+on travaille sur la 3.13, la branche LTS du moment. J'explique pourquoi au module 3.
 
 **Grafana** est né en 2014 comme un fork de Kibana 3, avec une idée : afficher des séries
 temporelles de n'importe quelle source. Il ne stocke rien et ne collecte rien : il interroge
@@ -130,7 +132,7 @@ n'envoie pas. On le voit cet après-midi.
 
 ---
 
-## Module 2 — Architecture de Prometheus et place de Grafana (40 min)
+## Module 2 — Architecture de Prometheus et place de Grafana (35 min)
 
 **Objectif.** Connaître les composants, le modèle de données et les quatre types de métriques.
 À la fin, un stagiaire doit pouvoir dessiner l'architecture au tableau.
@@ -212,6 +214,8 @@ Prometheus pour savoir qui est en cause.
 
 ### Ce que je montre
 
+Sur ma stack complète (les stagiaires n'ont encore rien d'installé, c'est voulu) :
+
 - http://localhost:5001/metrics : je fais défiler, je pointe un `# TYPE ... counter`, un
   `gauge`, un `histogram` avec ses buckets `le=`, et le `summary` avec `_count` et `_sum`.
 - http://localhost:9090 → **Status → Target health** : la liste des cibles, chacune avec son
@@ -230,10 +234,10 @@ exposé par Prometheus lui-même.
 
 ---
 
-## Module 3 — Installation et prise en main (50 min)
+## Module 3 — Installer à la main (60 min, exercices compris)
 
-**Objectif.** Savoir comment on installe Prometheus et Grafana « en vrai », et maîtriser
-l'environnement du lab.
+**Objectif.** Voir les tripes de la bête avant de la mettre en boîte : un binaire, un fichier
+YAML, un dossier de données. Puis Grafana, branché à la main. Rien n'est installé au départ.
 
 ### Ce que je dis
 
@@ -242,133 +246,171 @@ l'environnement du lab.
 1. **Kubernetes avec l'opérateur** (kube-prometheus-stack, Helm) : le cas majoritaire en
    production. Les cibles sont découvertes automatiquement, la configuration passe par des
    objets `ServiceMonitor` et `PrometheusRule`.
-2. **Conteneur Docker** : `docker run -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus:v3.15.0`.
-   C'est notre cas.
+2. **Conteneur Docker** : `docker run -p 9090:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml quay.io/prometheus/prometheus:v3.13.3`.
+   Ce qu'on fera cet après-midi.
 3. **Binaire** : une archive tar.gz sur GitHub, un seul exécutable, `./prometheus --config.file=prometheus.yml`.
-   Idéal pour comprendre : pas de magie, un binaire, un fichier YAML, un dossier `data/`.
+   Ce qu'on fait maintenant, parce que c'est là qu'on comprend.
 4. **Paquet distribution** (apt, dnf) : souvent en retard de plusieurs versions, je déconseille.
 5. **Managé** : Grafana Cloud, Amazon Managed Prometheus, Google Cloud Managed Service for
-   Prometheus, ou un stockage compatible (Mimir, VictoriaMetrics, Thanos). On en parle au
-   jour 3.
+   Prometheus, ou un stockage compatible (Mimir, VictoriaMetrics, Thanos). On en parle au jour 3.
 
 Même chose pour Grafana : Helm, Docker (`grafana/grafana:13.2.1`), paquet `.deb`/`.rpm`
-(Grafana Labs maintient ses propres dépôts, à jour), ou Grafana Cloud.
+(Grafana Labs maintient ses propres dépôts, à jour), binaire, ou Grafana Cloud.
+
+**Quelle version ? La question qu'on oublie.** Prometheus sort une version mineure toutes les
+six semaines (3.12 en mai, 3.13 en juillet, 3.14 en août, 3.15 il y a deux jours). Une mineure
+cesse de recevoir des correctifs dès que la suivante sort : qui installe la 3.14.0 aujourd'hui
+installe une version que plus personne ne corrige. Une fois par an, une mineure est déclarée
+**LTS** : elle reçoit pendant un an les correctifs de sécurité et de bugs graves, avec un mois de
+recouvrement avec la LTS suivante. En ce moment c'est la **3.13** (sortie le 1er juillet 2026,
+supportée jusqu'au 31 juillet 2027, déjà trois patchs : 3.13.1, 3.13.2, 3.13.3) ; avant elle, la
+3.5, en fin de vie depuis le 31 juillet. On travaille donc sur la 3.13.3, et c'est ce que je
+recommande en production : suivre la LTS, appliquer ses patchs dans le mois, et ne passer sur
+une mineure hors LTS que pour une fonctionnalité dont on a vraiment besoin, en sachant qu'on
+devra alors suivre toutes les mineures. Ne jamais déployer une version qui a moins d'un mois :
+on laisse les autres essuyer les plâtres. La liste des LTS et leurs dates sont sur
+prometheus.io, page *Release cycle*.
+
+Grafana, lui, n'a pas de LTS nommée : une majeure par an (avril-mai, Grafana 13 en avril 2026),
+une mineure tous les deux mois, des patchs mensuels, et les correctifs de sécurité sont
+étiquetés `+security-01`. Chaque mineure est supportée neuf mois, la dernière mineure d'une
+majeure quinze mois. Le bon rythme : suivre les mineures avec un ou deux mois de retard en
+lisant le changelog, et surtout lire le guide de migration à chaque majeure (les options
+supprimées, les changements d'UI qui cassent les habitudes des utilisateurs).
+
+Question à poser à la salle : « qui sait quelle version de Prometheus tourne chez vous, et
+depuis quand elle n'a pas été mise à jour ? » Le silence est la réponse habituelle. Un outil de
+surveillance qu'on ne met pas à jour est un outil de surveillance qu'on n'audite pas.
+
+> **Anecdote — la 2.x qu'on n'ose plus toucher.** Chez un client, un Prometheus 2.37 tournait
+> depuis trois ans sans mise à jour, parce que « ça marche ». Le jour où il a fallu brancher un
+> exporter récent, les native histograms qu'il exposait ont fait tomber le scrape. La mise à
+> jour vers la 3 s'est faite dans l'urgence, un vendredi, avec les changements de syntaxe
+> PromQL et d'UI d'un coup. Une LTS suivie, c'est deux mises à jour par an, prévues, testées,
+> ennuyeuses. C'est le but.
 
 Les fichiers et dossiers qui comptent :
 
 | Prometheus | Grafana |
 |---|---|
-| `prometheus.yml` : la configuration | `grafana.ini` (ou `custom.ini`, ou variables `GF_*`) |
-| `--storage.tsdb.path` (défaut `data/`) : la base | `/var/lib/grafana` : la base SQLite `grafana.db`, les plugins |
-| `--storage.tsdb.retention.time` (défaut 15d) | `/etc/grafana/provisioning/` : datasources, dashboards, alerting en YAML |
+| `prometheus.yml` : la configuration | `conf/defaults.ini` (à ne jamais modifier), `conf/custom.ini` ou variables `GF_*` |
+| `--storage.tsdb.path` (défaut `data/`) : la base | `data/` : la base SQLite `grafana.db`, les plugins |
+| `--storage.tsdb.retention.time` (défaut 15d) | `conf/provisioning/` : datasources, dashboards, alerting en YAML |
 | `--web.enable-lifecycle` : autorise le reload par HTTP | port 3000, compte `admin` |
-| port 9090 | |
+| port 9090, pas d'authentification | |
 
-**Pourquoi Docker pour la formation.** Parce qu'on a huit services à faire tourner et que je
-veux que tout le monde ait exactement la même chose. Le `docker-compose.yml` est lisible : on
-l'ouvre ensemble.
+**La règle du jour.** Chaque brique de la stack, on l'ajoute nous-mêmes, quand on en a
+besoin. Ce matin en binaire, cet après-midi en conteneur, une brique par exercice. Le
+`docker-compose.yml` du dépôt est vide au départ : à 17h30 il aura cinq briques.
 
 ### Ce que je montre
 
-J'ouvre `docker-compose.yml` et je commente service par service, sans entrer dans les
-détails : les deux instances de la boutique, le générateur de trafic, Redis et son exporter,
-la boîte de réception, Prometheus avec ses flags, Alertmanager, les exporters, Grafana avec
-son provisioning. Je m'arrête sur les flags de Prometheus :
+Rien avant les exercices : je fais avec eux. Je projette mon terminal et j'avance au même
+rythme, en commentant. Sur Codespaces, je montre l'onglet *Ports* dès que Prometheus démarre.
 
-```yaml
-command:
-  - --config.file=/etc/prometheus/prometheus.yml
-  - --storage.tsdb.path=/prometheus
-  - --storage.tsdb.retention.time=7d
-  - --web.enable-lifecycle          # POST /-/reload
-  - --web.enable-admin-api          # snapshots (Jour 3)
-  - --web.enable-remote-write-receiver
-  - --web.external-url=http://localhost:9090
-```
-
-Puis `docker compose exec prometheus prometheus --help | head -60` pour montrer qu'il y a
-une centaine de flags et que ceux-là sont les seuls qu'on touche en général.
-
-### Exercice 1.1 — Démarrer et vérifier (10 min)
+### Exercice 1.1 — Installer et lancer Prometheus (15 min)
 
 **Énoncé (guide stagiaire).**
-1. Lancez la stack : `./lab.sh up` (ou `.\lab.ps1 up`, ou créez votre Codespace).
-2. Vérifiez que tous les conteneurs sont `Up` : `./lab.sh status`.
-3. Ouvrez Prometheus, Grafana (admin / formation), Alertmanager et l'Inbox dans quatre onglets.
-4. Dans Prometheus, **Status → Target health** : combien de cibles sont `UP` ? Notez-les.
+1. Ouvrez la page des releases de Prometheus sur GitHub (ou `prometheus.io/download`) : quelle
+   est la dernière version ? Laquelle est la LTS ? Quelle version télécharge `install/download.sh` ?
+   Puis téléchargez les binaires : `./install/download.sh` (Linux, Codespaces, macOS) ou
+   `.\install\download.ps1` (Windows). Regardez ce qu'il y a dans `install/bin/prometheus/` :
+   combien de fichiers ? Lesquels sont exécutables ?
+2. Créez `install/prometheus.yml` avec un seul job, `prometheus`, qui scrape `localhost:9090`
+   toutes les 15 secondes.
+3. Lancez-le depuis `install/bin/prometheus/` :
+   `./prometheus --config.file=../../prometheus.yml --storage.tsdb.path=../../data`
+   (Windows : `.\prometheus.exe ...`). Lisez les premières lignes de log : quelle version ? quel
+   port ? où écrit-il ?
+4. http://localhost:9090 → **Status → Target health** : une cible, UP. Puis regardez ce qui est
+   apparu dans `install/data/`.
 
-**Corrigé.** Trois cibles au démarrage : `prometheus` (localhost:9090) et les deux instances
-`shop-api`. Le Node Exporter tourne mais n'est pas encore scrapé : c'est le TP 1.
+**Corrigé.**
 
-**Ce que je vérifie.** Que tout le monde a bien 3/3 UP. Erreurs classiques : port 3000 déjà
-pris (un autre Grafana, ou un serveur de dev Node) ; Docker Desktop pas démarré ; sur Windows,
-le script bloqué par la politique d'exécution.
+```yaml
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+```
+
+La dernière version est la 3.15.0 (24 septembre 2026), la LTS est la 3.13 et le script prend
+la 3.13.3 : c'est voulu, on vient de le dire. Deux exécutables dans l'archive : `prometheus` et `promtool`. Les logs disent `Server is ready
+to receive web requests`, `listening on :9090`, et le dossier `data/` contient `wal/`, `chunks_head/`,
+`queries.active` et un `lock` tant qu'il tourne. Pas de base de données à installer, pas de service : un binaire, un YAML, un dossier.
+
+**Ce que je vérifie.** Sur macOS, un binaire téléchargé par le navigateur peut être bloqué par
+Gatekeeper ; le script passe par `curl` et ne pose pas ce marqueur. Sur Windows, PowerShell doit
+être dans le dossier du binaire (le `..\..\` du chemin). Sur Codespaces, l'onglet *Ports* affiche
+9090 tout seul.
 
 ### Exercice 1.2 — Lire une page /metrics (10 min)
 
-**Énoncé.** Ouvrez http://localhost:5001/metrics (ou le port 5001 dans l'onglet Ports).
+**Énoncé.** Prometheus se surveille lui-même : ouvrez http://localhost:9090/metrics.
 1. Trouvez une métrique de chaque type : counter, gauge, histogram, summary. Notez leur nom.
-2. Pour `http_request_duration_seconds`, combien de buckets ? Quelle est la borne du dernier ?
-3. Quelle est la version de l'application ? Où est-elle stockée ?
-4. Que vaut `shop_revenue_euros_total` ? Rechargez la page : elle a bougé ?
+2. Pour `prometheus_http_request_duration_seconds`, combien de buckets ? Que vaut le dernier ?
+3. `go_gc_duration_seconds` est un Summary : qu'est-ce qui le distingue de l'histogramme ?
+4. Combien de séries la page contient-elle, à la louche ? (Comptez les lignes sans `#`.)
 
 **Corrigé.**
-1. Counter : `http_requests_total`, `shop_orders_total`, `shop_revenue_euros_total`. Gauge :
-   `shop_cart_items`, `shop_stock_units`, `http_requests_in_progress`. Histogram :
-   `http_request_duration_seconds` (`_bucket`, `_sum`, `_count`). Summary :
-   `shop_payment_duration_seconds` (`_count`, `_sum`, pas de quantiles en Python).
-2. 11 buckets explicites, de `le="0.005"` à `le="10.0"`, plus `le="+Inf"`. Chaque bucket est
-   cumulatif : `le="0.5"` compte toutes les requêtes de moins de 500 ms.
-3. `shop_app_info{instance_name="shop-api-1",version="1.4.2"} 1.0`. La valeur est toujours 1 ;
-   l'information est dans les labels. C'est le pattern *info metric*, on l'utilisera au jour 2
-   pour une jointure.
-4. Elle monte à chaque commande. Un counter, donc.
+1. Counter : `prometheus_http_requests_total`, `prometheus_tsdb_head_samples_appended_total`.
+   Gauge : `prometheus_tsdb_head_series`, `go_goroutines`, `process_resident_memory_bytes`.
+   Histogram : `prometheus_http_request_duration_seconds` (`_bucket`, `_sum`, `_count`).
+   Summary : `go_gc_duration_seconds` (`{quantile="0.5"}`... `_sum`, `_count`).
+2. Buckets `le="0.1"`, `0.2`, `0.4`, `1`, `3`, `8`, `20`, `60`, `120`, `+Inf` : Prometheus a
+   choisi ses propres bornes, adaptées à des requêtes qui peuvent être longues.
+3. Le Summary expose directement des quantiles calculés dans le processus (`quantile="0.99"`),
+   pas de buckets : impossible de les agréger entre plusieurs instances.
+4. Environ 700 lignes. Une seule cible, déjà 700 séries : ça donne l'échelle.
 
-Je fais remarquer les métriques `python_*` et `process_*` : la bibliothèque cliente les ajoute
-gratuitement (mémoire du processus, GC, descripteurs de fichiers).
+Je fais remarquer `# HELP` et `# TYPE` : n'importe quel langage peut produire ça avec un `printf`.
 
-### Exercice 1.3 — L'interface de Prometheus (10 min)
+### Exercice 1.3 — L'interface et les premières requêtes (10 min)
 
 **Énoncé.**
-1. **Status → Configuration** : retrouvez le `scrape_interval` global.
-2. **Status → Runtime & build information** : quelle version de Prometheus ? Depuis combien de
-   temps tourne-t-il ?
-3. **Status → TSDB status** : combien de séries en mémoire ? Quelle métrique a le plus de
-   séries ?
-4. Onglet **Query** : tapez `up` et exécutez. Puis passez en onglet **Graph**.
+1. **Status → Configuration** : c'est votre fichier ? **Status → Runtime & build information** :
+   version, uptime. **Status → TSDB status** : combien de séries en mémoire ?
+2. Onglet **Query** : `up`, puis passez en **Graph**.
+3. `prometheus_http_requests_total` : combien de séries ? Gardez uniquement le handler
+   `/api/v1/query` (label `handler`). Puis uniquement les codes 4xx et 5xx (label `code`, regex).
+4. Onglet **Explain** sur `rate(prometheus_http_requests_total[5m])` : que raconte-t-il ?
 
-**Corrigé.** `scrape_interval: 15s`. Version 3.15.0. Environ 2 000 séries après quelques
-minutes ; la métrique la plus « lourde » est `http_request_duration_seconds_bucket` (12 buckets
-× routes × 2 instances). `up` renvoie 3 séries à 1.
+**Corrigé.** `prometheus_http_requests_total{handler="/api/v1/query"}`,
+`prometheus_http_requests_total{code=~"4..|5.."}`. L'onglet *Explain* de Prometheus 3 décompose
+la requête : un sélecteur, une fenêtre de 5 minutes, la fonction `rate`. On ne va pas plus loin
+en PromQL aujourd'hui : `{label="valeur"}`, `!=`, `=~`, c'est tout ce qu'il faut pour cet
+après-midi.
 
-Je fais remarquer la nouvelle interface de Prometheus 3 (l'onglet *Explain* qui décompose une
-requête, le mode *Table* / *Graph*, la complétion dans la barre de requête).
+### Exercice 1.4 — Installer Grafana et le brancher (15 min)
 
-### Exercice 1.4 — Premières requêtes (10 min)
+**Énoncé.** Dans un second terminal :
+1. Lancez Grafana depuis `install/bin/grafana/` : `./bin/grafana server --homepath=$PWD`
+   (Windows : `.\bin\grafana.exe server --homepath=$PWD`). Quel port ? Où écrit-il sa base ?
+2. http://localhost:3000, `admin` / `admin`, passez l'écran de changement de mot de passe.
+3. **Connections → Data sources → Add new data source → Prometheus**. URL :
+   `http://localhost:9090`. *Save & test*.
+4. **Explore** : `up`, puis `rate(prometheus_http_requests_total[5m])` sur les 15 dernières
+   minutes. Cliquez sur *Builder* pour voir la même requête construite en cliquant.
+5. Regardez `install/bin/grafana/data/` : que contient-il ?
 
-**Énoncé.** Dans l'onglet Query :
-1. `http_requests_total` : combien de séries ?
-2. Ne gardez que les requêtes de `shop-api-2` (label `instance`).
-3. Ne gardez que les erreurs (codes 4xx et 5xx) : label `status`, expression régulière.
-4. Combien de requêtes `POST` sur `/api/checkout` depuis le démarrage de shop-api-1 ?
+**Corrigé.** Port 3000, base SQLite `data/grafana.db`, logs dans `data/log/`. Le *Save & test*
+doit dire « Successfully queried the Prometheus API ». Message à faire passer : Grafana ne
+stocke rien d'autre que sa configuration ; la datasource, c'est une URL et rien de plus. Et on
+vient de la cliquer à la main : cet après-midi, elle sera provisionnée par fichier, et on
+comparera.
 
-**Corrigé.**
-1. Une quarantaine, une vingtaine par instance (ça dépend des routes déjà appelées) : chaque
-   combinaison méthode × route × code × instance est une série.
-2. `http_requests_total{instance="shop-api-2:5000"}`
-3. `http_requests_total{status=~"4..|5.."}`
-4. `http_requests_total{instance="shop-api-1:5000", method="POST", route="/api/checkout"}` :
-   une valeur par code (201 et éventuellement 502).
-
-Je ne vais pas plus loin : la syntaxe complète, c'est demain. L'important aujourd'hui, c'est
-`{label="valeur"}`, `!=` et `=~`.
+**Ce que je vérifie.** Sans `--homepath`, Grafana cherche `/usr/share/grafana` (le chemin des
+paquets) et refuse de démarrer. Sur Codespaces, l'URL de la datasource reste `http://localhost:9090`
+: c'est Grafana qui interroge Prometheus, sur la même machine.
 
 ---
 
 ## Module 4 — Configuration de Prometheus (40 min)
 
 **Objectif.** Lire et modifier `prometheus.yml` en sécurité : valider, recharger à chaud,
-découvrir des cibles autrement qu'à la main, réécrire des labels.
+comprendre où vont les cibles, découvrir des cibles autrement qu'à la main, réécrire des labels.
 
 ### Ce que je dis
 
@@ -396,6 +438,8 @@ scrape_configs:         # la liste des jobs
 
 Un *job* regroupe des cibles de même nature. Chaque cible reçoit automatiquement `job` et
 `instance`. Les labels ajoutés sous `static_configs` s'appliquent à toutes les cibles du bloc.
+Dans le dépôt, le bloc `alerting` est en commentaire : on n'a pas encore d'Alertmanager, on le
+décommentera au jour 3 (exercice 3.0) quand on activera la brique correspondante.
 
 **Le rythme.** `scrape_interval` : trop court, on charge les cibles et le disque ; trop long,
 on rate les pics. 15 s est le standard, 30 s ou 60 s pour les gros parcs, 5 s pour un besoin
@@ -408,13 +452,13 @@ garde l'ancienne configuration et le dit dans ses logs, et la métrique
 `prometheus_config_last_reload_successful` passe à 0. On alertera dessus au jour 3.
 
 **Valider avant.** `promtool check config prometheus.yml`. Toujours. C'est le `nginx -t` de
-Prometheus. Dans le lab : `./lab.sh check`.
+Prometheus. Dans le lab en conteneur : `./lab.sh check`.
 
 **La découverte de services.** Lister les cibles à la main ne tient pas au-delà de dix
 serveurs. Prometheus sait interroger : Kubernetes (`kubernetes_sd_configs`, le plus utilisé),
 Consul, DNS, EC2/Azure/GCE, Docker, et le plus simple de tous, un fichier (`file_sd_configs`)
 que n'importe quel script peut écrire. Le fichier est relu automatiquement, sans reload. C'est
-le pont idéal avec un outil existant (CMDB, Ansible, Terraform).
+le pont idéal avec un outil existant (CMDB, Ansible, Terraform). On s'en sert au TP 2.
 
 **Le relabeling.** Entre la découverte d'une cible et son scrape, Prometheus passe la cible
 dans une chaîne de règles `relabel_configs` qui peuvent renommer, filtrer, réécrire. C'est le
@@ -425,83 +469,92 @@ ne coûtent du disque. On en voit un usage concret avec le Blackbox Exporter au 
 
 ### Ce que je montre
 
-- `./lab.sh check` puis je casse volontairement l'indentation d'une ligne, `./lab.sh check`
-  refuse, je répare.
-- `./lab.sh reload`, puis dans Prometheus **Status → Configuration** pour montrer que c'est
-  bien la version rechargée.
-- `docker compose logs --tail 20 prometheus` pour montrer la ligne `Completed loading of configuration file`.
+Sur mon binaire : je casse volontairement l'indentation d'une ligne, `./promtool check config`
+refuse, je répare. `kill -HUP` et la ligne `Completed loading of configuration file` dans le
+terminal de Prometheus.
 
-### Exercice 1.5 — Changer le rythme (10 min)
+### Exercice 1.5 — Changer le rythme (15 min)
 
-**Énoncé.**
-1. Pour le job `shop-api` uniquement, passez le `scrape_interval` à 5 s.
-2. Validez la configuration, rechargez.
-3. Vérifiez dans **Status → Target health** (colonne *Last scrape*) et avec la requête
+**Énoncé.** Toujours sur le binaire.
+1. Passez le `scrape_interval` du job `prometheus` à 5 s. Validez avec `./promtool check config ../../prometheus.yml`
+   (depuis `install/bin/prometheus/`).
+2. Rechargez sans redémarrer : `kill -HUP $(pgrep -x prometheus)` (Linux, macOS). Sous Windows,
+   il n'y a pas de signal : redémarrez Prometheus en ajoutant `--web.enable-lifecycle`, puis
+   `Invoke-RestMethod -Method Post http://localhost:9090/-/reload`.
+3. Vérifiez dans **Target health** (colonne *Last scrape*) et avec
    `prometheus_target_interval_length_seconds{quantile="0.99"}`.
+4. Remettez 15 s.
 
 **Corrigé.**
 
 ```yaml
-  - job_name: shop-api
+  - job_name: prometheus
     scrape_interval: 5s
     static_configs:
-      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+      - targets: ["localhost:9090"]
 ```
 
-`./lab.sh check && ./lab.sh reload`. Dans Target health, *Last scrape* ne dépasse plus 5 s.
-La requête renvoie une série par intervalle configuré : on voit apparaître `interval="5s"`.
-Je demande ensuite de **remettre 15 s** : on ne veut pas fausser les exercices `rate()` de demain.
+*Last scrape* ne dépasse plus 5 s ; la requête montre `interval="5s"`. Je profite du détour
+Windows pour dire que `--web.enable-lifecycle` est ce qu'on activera systématiquement en
+conteneur : pas de `kill` dans un conteneur qu'on ne veut pas ouvrir.
 
-**Ce que je vérifie.** Que le reload a été fait (beaucoup oublient et attendent que ça change
-tout seul).
-
-### Exercice 1.6 — Casser pour comprendre (5 min)
+### Exercice 1.6 — Casser pour comprendre (10 min)
 
 **Énoncé.**
-1. Introduisez une erreur dans `prometheus.yml` (un `:` en trop, un tiret manquant).
-2. Rechargez **sans** valider. Que se passe-t-il ? Regardez les logs et la métrique
-   `prometheus_config_last_reload_successful`.
+1. Introduisez une erreur dans `install/prometheus.yml` (un `:` en trop, un tiret manquant).
+2. Rechargez **sans** valider. Que se passe-t-il ? Regardez le terminal de Prometheus et la
+   métrique `prometheus_config_last_reload_successful`.
 3. Réparez, rechargez, vérifiez que la métrique repasse à 1.
+4. Arrêtez Prometheus (`Ctrl+C`) et relancez-le : la config cassée l'empêche-t-elle de démarrer ?
 
-**Corrigé.** Le `curl -X POST /-/reload` renvoie une erreur HTTP 500 avec le message de parsing.
-Prometheus continue de tourner avec l'ancienne configuration. La métrique vaut 0 tant que le
-fichier est invalide. Message à faire passer : Prometheus est conservateur, mais une
-configuration cassée qui traîne, personne ne s'en rend compte sans alerte.
+**Corrigé.** Au reload, Prometheus loggue `Error reloading config` avec la ligne et la colonne,
+garde l'ancienne configuration, et la métrique vaut 0. Au **démarrage**, en revanche, une config
+invalide est fatale : il s'arrête tout de suite. Message : Prometheus est conservateur en
+marche, intraitable au démarrage. Une config cassée qui traîne, personne ne s'en rend compte
+sans alerte.
 
-### Exercice 1.7 — Découverte par fichier (10 min)
+**Ce que je vérifie.** Que tout le monde a bien réparé avant le déjeuner. Les binaires restent
+lancés jusqu'à l'exercice 1.7.
 
-**Énoncé.** La boîte de réception (`inbox`) expose aussi une page `/metrics` sur le port 8080.
-Ajoutez-la à Prometheus **sans** la lister dans `prometheus.yml` :
-1. Ajoutez un job `file-sd` qui lit tous les fichiers `targets/*.yml`.
-2. Créez `prometheus/targets/extra.yml` avec la cible `inbox:8080` et un label `tier: outils`.
-3. Rechargez une fois (pour le nouveau job), puis vérifiez que la cible apparaît : les fichiers
-   de cibles, eux, sont relus toutes les 30 s sans reload.
+---
 
-**Corrigé.**
+## Exercice 1.7 — Des binaires aux conteneurs (20 min)
 
-```yaml
-  - job_name: file-sd
-    file_sd_configs:
-      - files: ["targets/*.yml", "targets/*.json"]
-        refresh_interval: 30s
-```
+**Objectif.** Refaire exactement la même chose en Docker Compose, brique par brique, et
+comprendre ce que le provisioning change.
 
-`prometheus/targets/extra.yml` :
+**Ce que je dis.** Le `docker-compose.yml` du dépôt ne contient qu'une liste d'`include`
+commentés : un fichier par brique dans `compose/`. On active une brique, on relance, et on
+regarde ce qu'elle apporte. C'est la seule différence avec ce matin : le binaire, son YAML et
+son dossier de données sont dans un conteneur, et le reload passe par HTTP.
 
-```yaml
-- targets: ["inbox:8080"]
-  labels:
-    tier: outils
-```
+**Énoncé.**
+1. Arrêtez les deux binaires (`Ctrl+C` dans chaque terminal) : les ports 9090 et 3000 doivent
+   être libres.
+2. Ouvrez `compose/01-prometheus.yml` et lisez-le : où est le `prometheus.yml` ? le dossier de
+   données ? quels flags en plus par rapport à ce matin ?
+3. Dans `docker-compose.yml`, décommentez `compose/01-prometheus.yml` et `compose/02-grafana.yml`.
+   `./lab.sh up`, puis `./lab.sh status`.
+4. Prometheus : **Status → Configuration**. Ce n'est plus votre fichier de ce matin, c'est
+   `prometheus/prometheus.yml` du dépôt. Combien de jobs ?
+5. Grafana (`admin` / `formation`) : **Connections → Data sources**. La source Prometheus est
+   déjà là, avec un cadenas : d'où vient-elle ? Ouvrez `grafana/provisioning/datasources/prometheus.yml`.
+   Pourquoi l'URL est-elle `http://prometheus:9090` et plus `localhost` ?
+6. Dashboards : *00 - Bienvenue dans le lab* est apparu tout seul. D'où vient-il ?
+7. `./lab.sh check` puis `./lab.sh reload` : lisez ce que font ces deux commandes dans `lab.sh`.
 
-Un reload est nécessaire pour le nouveau job (une fois), pas pour les fichiers de cibles qui
-sont relus toutes les 30 s. Dans Target health, le job `file-sd` apparaît avec la cible
-`inbox:8080` UP, et `inbox_messages_received_total` est disponible. On l'utilisera au jour 3
-pour compter les notifications reçues.
+**Corrigé.** Le compose monte `prometheus/` dans `/etc/prometheus` et un volume nommé pour la
+TSDB ; il ajoute `--web.enable-lifecycle`, `--web.enable-admin-api` et `--web.external-url`.
+Un seul job pour l'instant (`prometheus`) : les autres, c'est nous qui les ajoutons cet
+après-midi. La datasource et le dashboard viennent de `grafana/provisioning/` : c'est le
+*provisioning*, on y revient au jour 2. `localhost` dans un conteneur, c'est le conteneur
+lui-même ; entre conteneurs on utilise le nom du service, résolu par le DNS de Docker.
 
-**Ce que je vérifie.** Le chemin des fichiers est relatif au dossier de `prometheus.yml`
-(`/etc/prometheus` dans le conteneur, donc `prometheus/targets/` sur la machine). Erreur
-classique : écrire un chemin absolu de la machine hôte.
+**Ce que je vérifie.** Que les binaires sont bien arrêtés (sinon `port already allocated`). Que
+tout le monde voit deux conteneurs `Up`. Codespaces : l'onglet *Ports* liste maintenant les ports
+des conteneurs.
+
+![Ce matin en binaire, cet après-midi en conteneur](../../diagrams/binaire-conteneur.png)
 
 ### Exercice 1.8 — Relabeling (bonus, 10 min, après le TP 1)
 
@@ -530,7 +583,7 @@ tout en double. En vrai, on met le `metric_relabel_configs` directement sur le j
 
 ---
 
-## Module 5 — Les exporters (30 min)
+## Module 5 — Les exporters (25 min)
 
 **Objectif.** Comprendre ce qu'est un exporter, savoir en choisir un et le configurer.
 
@@ -591,7 +644,7 @@ jamais pour des services.
 
 ---
 
-## TP 1 — Node Exporter : de la machine à Prometheus (60 min)
+## TP 1 — Node Exporter : de la machine à Prometheus (55 min)
 
 **Objectif.** Le cas pratique du programme : ajouter et configurer un Node Exporter, en tirer
 les indicateurs classiques d'un serveur Linux.
@@ -600,12 +653,14 @@ les indicateurs classiques d'un serveur Linux.
 quoi que ce soit, vous voulez ses signes vitaux dans Prometheus : CPU, mémoire, disque, réseau,
 uptime. Et vous voulez pouvoir y ajouter vos propres indicateurs avec un simple script.
 
-### Partie 1 — Brancher l'exporter (10 min)
+### Partie 1 — Brancher l'exporter (15 min)
 
 **Énoncé.**
-1. Dans `prometheus/prometheus.yml`, ajoutez un job `node` qui scrape `node-exporter:9100`.
-2. Validez, rechargez, vérifiez la cible dans Target health.
-3. Requête : `node_uname_info`. Quel noyau ? Quel nom de machine ?
+1. Lisez `compose/04-node-exporter.yml` : pourquoi ces trois montages `/proc`, `/sys`, `/` ?
+   Activez la brique dans `docker-compose.yml`, `./lab.sh up`. Ouvrez http://localhost:9100/metrics.
+2. Dans `prometheus/prometheus.yml`, ajoutez un job `node` qui scrape `node-exporter:9100`.
+3. Validez (`./lab.sh check`), rechargez (`./lab.sh reload`), vérifiez la cible dans Target health.
+4. Requête : `node_uname_info`. Quel noyau ? Quel nom de machine ?
 
 **Corrigé.**
 
@@ -648,7 +703,7 @@ Je fais lancer `./lab.sh chaos cpu 120` et observer la courbe monter sur l'ongle
 **Énoncé.**
 1. Le collector `processes` (nombre de processus, threads) est désactivé par défaut. Activez-le
    en ajoutant `--collector.processes` aux `command` du service `node-exporter` dans
-   `docker-compose.yml`, puis `docker compose up -d node-exporter`.
+   `compose/04-node-exporter.yml`, puis `docker compose up -d node-exporter`.
 2. Vérifiez l'apparition de `node_processes_state` et `node_processes_threads`.
 3. Désactivez un collector inutile pour vous (par exemple `--no-collector.arp`) et vérifiez que
    `node_arp_entries` disparaît de `/metrics`.
@@ -705,7 +760,7 @@ erreur de format fait échouer tout le fichier (métrique `node_textfile_scrape_
 > disparu, le script écrivait dans le vide. Une gauge `backup_last_success_timestamp_seconds`
 > et une alerte « plus de 24 h » auraient coûté dix minutes. On écrit cette alerte au jour 3.
 
-### Partie 5 — Vue d'ensemble (15 min)
+### Partie 5 — Vue d'ensemble (10 min)
 
 **Énoncé.**
 1. Quel est le disque (`mountpoint`) le plus rempli ? Utilisez `topk(1, ...)` sur la requête de
@@ -728,7 +783,7 @@ les dashboards de demain en dépendent.
 
 ---
 
-## Module 6 — Instrumenter son application (30 min)
+## Module 6 — Instrumenter son application (25 min)
 
 **Objectif.** Savoir ajouter une métrique dans du code, choisir son type et ses labels, éviter
 l'explosion de cardinalité.
@@ -803,60 +858,109 @@ Une série coûte de la mémoire (quelques ko dans le head) et de l'index. Quelq
 
 `apps/shop-api/app.py` dans l'éditeur : les déclarations en haut, le middleware `after_request`
 qui observe chaque requête, la route `/api/checkout` qui incrémente les compteurs métier. Je
-pointe le `TODO` du TP 2.
+pointe les cinq `TODO` du TP 2, sans les faire.
 
 ---
 
-## TP 2 — Instrumentation et services tiers (60 min)
+## TP 2 — Application, instrumentation et services tiers (60 min)
 
-**Objectif.** Ajouter une métrique métier dans le code, brancher un exporter tiers, des sondes
-externes et un batch. À la fin, `prometheus.yml` compte sept jobs.
+**Objectif.** Brancher l'application fil rouge, terminer son instrumentation dans le code,
+puis lui ajouter un exporter tiers, des sondes externes et un batch. À la fin, `prometheus.yml`
+compte six jobs et la stack a cinq briques.
 
-**Mise en situation.** Le directeur commercial veut savoir quelles fiches produit sont les plus
+**Mise en situation.** L'équipe boutique livre son API à moitié instrumentée : elle compte les
+requêtes, mais ne mesure ni les latences, ni les commandes, ni le stock. Le directeur commercial
+veut son chiffre d'affaires en temps réel et savoir quelles fiches produit sont les plus
 consultées. L'équipe infra veut surveiller Redis. Le support veut être prévenu si le site est
 inaccessible depuis l'extérieur. Et il y a ce batch de sauvegarde nocturne...
 
-### Partie 1 — Une métrique métier dans le code (15 min)
+### Partie 1 — Brancher l'application (10 min)
 
 **Énoncé.**
-1. Dans `apps/shop-api/app.py`, déclarez un Counter `shop_product_views_total` avec un label
-   `product` (cherchez le `TODO`).
-2. Incrémentez-le dans la route `/api/products/<product>`.
-3. Reconstruisez et redémarrez les deux instances : `docker compose up -d --build shop-api-1 shop-api-2`.
-4. Vérifiez sur `/metrics`, puis dans Prometheus : quel produit est le plus consulté ?
-   `topk(1, sum by (product) (shop_product_views_total))`.
+1. Lisez `compose/03-shop-api.yml` : combien de conteneurs ? À quoi sert `traffic` ? Pourquoi
+   deux instances de la même image ?
+2. Activez la brique, `./lab.sh up` (le premier build prend une minute). Ouvrez
+   http://localhost:5001/ puis http://localhost:5001/metrics : quelles métriques `http_*` et
+   `shop_*` existent déjà ? Lesquelles manquent par rapport à ce que le module 6 a décrit ?
+3. Ajoutez le job `shop-api` (deux cibles, labels `env: formation` et `team: boutique`). Validez,
+   rechargez, vérifiez.
+4. `sum by (route) (rate(http_requests_total[1m]))` : le trafic simulé se voit.
 
 **Corrigé.**
 
-```python
-PRODUCT_VIEWS = Counter(
-    "shop_product_views_total",
-    "Consultations de fiche produit",
-    ["product"],
-)
+```yaml
+  - job_name: shop-api
+    static_configs:
+      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+        labels:
+          env: formation
+          team: boutique
 ```
 
-Dans `product_detail`, avant `redis_incr(...)` :
+Il existe `http_requests_total` (counter), `http_requests_in_progress` et `shop_cart_items`
+(gauges), `shop_payment_duration_seconds` (summary sans quantiles, bibliothèque Python oblige),
+et les `python_*` / `process_*` gratuits. Il manque l'histogramme de latence, les compteurs
+de commandes et de chiffre d'affaires, la gauge de stock, l'info metric et les vues produit :
+c'est la partie 2.
+
+### Partie 2 — Terminer l'instrumentation (20 min)
+
+**Énoncé.** Dans `apps/shop-api/app.py`, cinq `TODO` numérotés, chacun en deux temps (déclarer
+la métrique, puis l'alimenter dans le code) :
+1. `HTTP_DURATION` : Histogram `http_request_duration_seconds`, label `route`, buckets de 5 ms à
+   10 s ; observer la durée de chaque requête dans le middleware `_observe`.
+2. `STOCK` : Gauge `shop_stock_units`, label `product` ; l'initialiser depuis le dict `stock`,
+   la mettre à jour à chaque commande et à chaque réassort.
+3. `ORDERS` (Counter `shop_orders_total`, label `payment_method`) et `REVENUE` (Counter
+   `shop_revenue_euros_total`) ; les incrémenter dans `/api/checkout`.
+4. `APP_INFO` : Gauge `shop_app_info` avec les labels `version` et `instance_name`, à 1.
+5. `PRODUCT_VIEWS` : Counter `shop_product_views_total`, label `product`, incrémenté dans
+   `/api/products/<product>` **après** la vérification du catalogue.
+
+Reconstruisez : `docker compose up -d --build shop-api-1 shop-api-2`. Vérifiez sur `/metrics`,
+puis dans Prometheus : `histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))`
+et `topk(1, sum by (product) (shop_product_views_total))`.
+
+**Corrigé.** Le fichier complet est `solutions/jour-1/app.py`. Les déclarations :
 
 ```python
-    PRODUCT_VIEWS.labels(product=product).inc()
+HTTP_DURATION = Histogram("http_request_duration_seconds", "Durée de traitement des requêtes HTTP",
+                          ["route"], buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10))
+STOCK = Gauge("shop_stock_units", "Unités en stock par produit", ["product"])
+ORDERS = Counter("shop_orders_total", "Commandes validées", ["payment_method"])
+REVENUE = Counter("shop_revenue_euros_total", "Chiffre d'affaires cumulé en euros")
+APP_INFO = Gauge("shop_app_info", "Informations de version", ["version", "instance_name"])
+APP_INFO.labels(version=APP_VERSION, instance_name=INSTANCE_NAME).set(1)
+PRODUCT_VIEWS = Counter("shop_product_views_total", "Consultations de fiche produit", ["product"])
 ```
 
-Le `clavier` gagne (le générateur de trafic le favorise). Question à poser : « pourquoi
-l'incrément est-il placé *après* le test `if product not in PRODUCTS` ? » Parce que sinon,
-n'importe qui pourrait créer des séries à l'infini en appelant `/api/products/nimportequoi`.
-Le label `product` n'est sûr que parce que ses valeurs sont bornées par le catalogue.
+Et les appels : `HTTP_DURATION.labels(route=route).observe(elapsed)` dans `_observe` ;
+`STOCK.labels(product=name).set(units)` à l'initialisation, après `stock[product] -= 1` et
+après le réassort ; `ORDERS.labels(payment_method=method).inc()` et `REVENUE.inc(PRODUCTS[product])`
+dans `checkout` ; `PRODUCT_VIEWS.labels(product=product).inc()` dans `product_detail`.
 
-**Ce que je vérifie.** Le rebuild : `docker compose up -d` sans `--build` relance l'ancienne
-image et rien ne change. Sur Codespaces, le build prend 30 à 60 s.
+Les erreurs que je vois à chaque session : oublier le `.labels(...)` avant `.inc()` (le
+Counter avec label refuse), mettre l'incrément de `PRODUCT_VIEWS` avant le test
+`if product not in PRODUCTS` (n'importe qui pourrait créer des séries à l'infini en appelant
+`/api/products/nimportequoi` : le label `product` n'est sûr que parce que ses valeurs sont
+bornées par le catalogue), et relancer sans `--build` (l'ancienne image repart, rien ne change).
 
-### Partie 2 — Un exporter tiers : Redis (10 min)
+Question à poser : « quel type pour le stock ? » Une Gauge, parce que ça monte et ça descend ;
+et on la `set()` depuis la valeur réelle plutôt que de la `dec()` : si le code et la métrique
+divergent, c'est la valeur réelle qui a raison.
 
-**Énoncé.** La boutique stocke des compteurs dans Redis. Un `redis-exporter` tourne déjà sur
-le port 9121.
-1. Ajoutez le job `redis` dans `prometheus.yml`. Validez, rechargez.
-2. Requêtes : `redis_up`, `redis_connected_clients`, `rate(redis_commands_processed_total[5m])`.
-3. Trouvez la commande Redis la plus utilisée : `topk(3, rate(redis_commands_total[5m]))`.
+**Ce que je vérifie.** Que les deux instances ont été reconstruites et que `shop_orders_total`
+apparaît chez tout le monde : les dashboards de demain en dépendent. Ceux qui sont bloqués
+reçoivent le corrigé projeté et repartent.
+
+### Partie 3 — Un exporter tiers : Redis (10 min)
+
+**Énoncé.** La boutique stocke des compteurs dans Redis.
+1. Activez la brique `compose/05-exporters.yml` (lisez-la : quatre services, dont un qui ne
+   démarre pas tout seul). `./lab.sh up`. Le `redis-exporter` répond sur le port 9121.
+2. Ajoutez le job `redis` dans `prometheus.yml`. Validez, rechargez.
+3. Requêtes : `redis_up`, `redis_connected_clients`, `rate(redis_commands_processed_total[5m])`.
+4. Trouvez la commande Redis la plus utilisée : `topk(3, rate(redis_commands_total[5m]))`.
 
 **Corrigé.**
 
@@ -870,7 +974,7 @@ le port 9121.
 par variable d'environnement `REDIS_ADDR` dans le compose ; c'est le pattern habituel, un
 exporter par instance de service, colocalisé (sidecar en Kubernetes).
 
-### Partie 3 — Sondes externes avec Blackbox (15 min)
+### Partie 4 — Sondes externes avec Blackbox (10 min)
 
 **Énoncé.** Vous voulez vérifier depuis l'extérieur que :
 - `http://shop-api-1:5000/health` et `http://shop-api-2:5000/health` répondent 2xx,
@@ -909,6 +1013,8 @@ exporter par instance de service, colocalisé (sidecar en Kubernetes).
         replacement: blackbox-exporter:9115
 ```
 
+![Le chemin d'une sonde Blackbox](../../diagrams/blackbox-relabel.png)
+
 Je décortique les trois règles au tableau, c'est le meilleur exemple de relabeling qui existe :
 1. L'adresse de la cible (`__address__`, ce que Prometheus s'apprête à scraper) est copiée dans
    `__param_target`, ce qui ajoute `?target=...` à l'URL.
@@ -925,24 +1031,42 @@ blackbox, `up` ne veut pas dire ce qu'on croit ; je m'assure que tout le monde l
 
 Division par 86400 pour les jours de certificat.
 
-### Partie 4 — Un batch et la Pushgateway (10 min)
+### Partie 5 — Un batch, la Pushgateway et la découverte par fichier (10 min)
 
 **Énoncé.**
 1. Lancez le batch : `./lab.sh batch` (il simule une sauvegarde de quelques secondes et pousse
    trois métriques). Regardez http://localhost:9091.
-2. Ajoutez le job `pushgateway` avec `honor_labels: true`. Validez, rechargez.
+2. Ajoutez le job `pushgateway` avec `honor_labels: true`, mais **sans** `static_configs` :
+   utilisez `file_sd_configs` sur `targets/*.yml`, et créez `prometheus/targets/pushgateway.yml`
+   avec la cible `pushgateway:9091` et un label `tier: outils`. Validez, rechargez une fois.
 3. Requêtes : `backup_duration_seconds`, `backup_size_megabytes`, et l'ancienneté de la
    dernière sauvegarde : `time() - backup_last_success_timestamp_seconds`.
-4. Sans `honor_labels`, que se passerait-il ? Essayez.
+4. Modifiez le label dans le fichier de cibles (`tier: batch`), sans reload : au bout de 30 s,
+   la cible change dans Target health.
+5. Sans `honor_labels`, que se passerait-il ? Essayez.
 
 **Corrigé.**
 
 ```yaml
   - job_name: pushgateway
     honor_labels: true
-    static_configs:
-      - targets: ["pushgateway:9091"]
+    file_sd_configs:
+      - files: ["targets/*.yml"]
+        refresh_interval: 30s
 ```
+
+`prometheus/targets/pushgateway.yml` :
+
+```yaml
+- targets: ["pushgateway:9091"]
+  labels:
+    tier: outils
+```
+
+Le chemin est relatif au dossier de `prometheus.yml` (`/etc/prometheus` dans le conteneur, donc
+`prometheus/targets/` sur la machine) ; erreur classique, un chemin absolu de la machine hôte.
+Un reload est nécessaire pour le nouveau job, pas pour les fichiers de cibles, relus toutes les
+30 s : c'est ça, la découverte de services, et n'importe quel script peut écrire ce fichier.
 
 Le script (`scripts/batch-job.sh`) pousse sur `/metrics/job/backup/instance/nightly` : les
 labels `job="backup"` et `instance="nightly"` font partie de la donnée. Sans `honor_labels`,
@@ -953,7 +1077,7 @@ Je relance le batch deux fois : les valeurs changent, mais la Pushgateway ne gar
 dernière. Et si le batch ne tourne plus jamais, la métrique reste là, figée, avec son
 timestamp qui vieillit : c'est exactement ce qu'on veut pour alerter.
 
-### Partie 5 — Chasse à la cardinalité (bonus, 10 min)
+### Partie 6 — Chasse à la cardinalité (bonus, 10 min)
 
 **Énoncé.**
 1. Quelles sont les dix métriques qui ont le plus de séries ?
@@ -964,13 +1088,13 @@ timestamp qui vieillit : c'est exactement ce qu'on veut pour alerter.
    `http_request_duration_seconds_bucket` ? Est-ce raisonnable ?
 
 **Corrigé.** Les buckets d'histogrammes dominent toujours. 200 routes × 50 instances × 12
-buckets × quelques méthodes = plusieurs centaines de milliers de séries pour une seule
+buckets = 120 000 séries pour une seule
 métrique. Réponse : on réduit les buckets (6 ou 7 bien choisis), on agrège avec des recording
 rules (jour 2), ou on passe aux native histograms.
 
 ---
 
-## 17h15 — Récap et quiz du jour 1 (15 min)
+## 17h20 — Récap et quiz du jour 1 (10 min)
 
 Je fais le tour à l'oral, réponses au tableau :
 
@@ -983,9 +1107,10 @@ Je fais le tour à l'oral, réponses au tableau :
 7. Le Node Exporter dans Docker Desktop mesure quoi ? *(la VM Linux)*
 8. Quel est le suffixe d'un counter ? D'une durée ? *(`_total`, `_seconds`)*
 
-**État attendu du `prometheus.yml` ce soir** : jobs `prometheus`, `shop-api`, `node`, `file-sd`,
-`redis`, `pushgateway`, `blackbox-http` (le job `node-light` du bonus a été retiré). Le
-corrigé complet est `solutions/jour-1/prometheus.yml`. Je demande à chacun de le comparer avec le
+**État attendu ce soir** : cinq briques actives dans `docker-compose.yml` (01, 02, 03, 04, 05),
+les jobs `prometheus`, `shop-api`, `node`, `redis`, `pushgateway` (par fichier) et `blackbox-http`
+dans `prometheus.yml` (le job `node-light` du bonus a été retiré), et les cinq TODO de
+`app.py` faits. Les corrigés sont `solutions/jour-1/prometheus.yml` et `solutions/jour-1/app.py`. Je demande à chacun de le comparer avec le
 sien avant de partir : demain matin, tout le monde repart du même point.
 
 Je rappelle : ne pas faire `./lab.sh reset` ce soir, on veut de l'historique pour demain. Sur

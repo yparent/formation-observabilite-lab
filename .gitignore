@@ -12,3 +12,6 @@ docs/build/node_modules/
 docs/build/*.html
 docs/build/*.pdf
 docs/build/package*.json
+install/bin/
+install/data/
+install/prometheus.yml

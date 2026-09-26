@@ -1,0 +1,24 @@
+# Brique 4 — Node Exporter, les métriques de la machine (TP 1)
+services:
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    container_name: node-exporter
+    restart: unless-stopped
+    ports: ["9100:9100"]
+    volumes:
+      # Sans ces montages, l'exporter ne verrait que son propre conteneur
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ../node-exporter/textfile:/textfile:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/.+)($$|/)
+      - --collector.textfile.directory=/textfile
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    name: formation-monitoring

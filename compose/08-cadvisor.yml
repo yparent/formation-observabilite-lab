@@ -1,0 +1,17 @@
+# Brique 8 (optionnelle) — cAdvisor : métriques des conteneurs (Linux et Docker Desktop)
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    container_name: cadvisor
+    restart: unless-stopped
+    ports: ["8085:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    name: formation-monitoring

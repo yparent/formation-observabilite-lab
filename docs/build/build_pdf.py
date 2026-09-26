@@ -57,6 +57,7 @@ table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9.
 th, td { border-bottom: 1px solid var(--line); padding: 1.6mm 2mm; vertical-align: top; text-align: left; }
 th { background: #eef1f5; font-weight: 650; color: var(--navy); border-bottom: 1.5px solid #c9cfd8; }
 thead { display: table-header-group; }
+.session td:nth-child(1), .session td:nth-child(3) { white-space: nowrap; }
 tr { break-inside: avoid; }
 td code { font-size: 8.2pt; }
 blockquote { margin: 3mm 0 4mm; padding: 2.5mm 4mm; background: var(--note-bg); border-left: 1.2mm solid var(--accent); border-radius: 1mm; break-inside: avoid; }
@@ -306,6 +307,7 @@ def build_formateur():
     parts = [(src / n).read_text() for n in sorted(p.name for p in src.glob("*.md"))]
     body = postprocess(md_to_html("\n\n".join(parts)))
     body = body.replace('src="../img/', f'src="file://{DOCS / "formateur" / "img"}/')
+    body = body.replace('src="../../diagrams/', f'src="file://{DOCS / "diagrams"}/')
     build("guide-formateur", DOCS / "formateur" / "Guide-formateur-Prometheus-Grafana.pdf",
           "Formation Prometheus &amp; Grafana",
           "Guide du formateur — déroulé complet des trois jours, exercices corrigés, démonstrations, anecdotes et points de vigilance",
@@ -320,10 +322,26 @@ def build_stagiaire(day: int):
     title, subtitle, meta, rest = m.groups()
     body = postprocess(md_to_html("# " + subtitle + "\n\n" + rest))
     body = body.replace('src="img/', f'src="file://{DOCS / "stagiaire" / "img"}/')
+    body = body.replace('src="../diagrams/', f'src="file://{DOCS / "diagrams"}/')
     build(f"guide-stagiaire-jour-{day}", DOCS / "stagiaire" / f"Guide-stagiaire-Jour-{day}.pdf",
           f"Guide stagiaire — Jour {day}", subtitle, "Formation Prometheus &amp; Grafana", body,
           "<strong>Formateur</strong> · Yohan Parent", "<strong>Sparks</strong> · édition septembre 2026",
           "Formation Prometheus & Grafana", f"Guide stagiaire · Jour {day}")
+
+
+def build_session(name: str):
+    """Déroulé d'une session client : docs/formateur/sessions/<name>.md → PDF à côté."""
+    src = DOCS / "formateur" / "sessions" / f"{name}.md"
+    text = src.read_text()
+    m = re.match(r"# (.*?)\n\n(.*)", text, flags=re.S)
+    title, rest = m.groups()
+    body = '<div class="session">' + postprocess(md_to_html("# " + title + "\n\n" + rest)) + "</div>"
+    body = body.replace('src="../../diagrams/', f'src="file://{DOCS / "diagrams"}/')
+    build(f"session-{name}", DOCS / "formateur" / "sessions" / f"Deroule-{name}.pdf",
+          "Formation Prometheus &amp; Grafana", title,
+          "Déroulé de session · support formateur", body,
+          "<strong>Yohan Parent</strong> · Architecte cloud, formateur", "<strong>Sparks</strong> · édition septembre 2026",
+          "Formation Prometheus & Grafana", f"Déroulé · {title.split(' — ')[0]}")
 
 
 if __name__ == "__main__":
@@ -333,3 +351,6 @@ if __name__ == "__main__":
     if what in ("all", "stagiaire"):
         for d in (1, 2, 3):
             build_stagiaire(d)
+    if what in ("all", "sessions"):
+        for p in sorted((DOCS / "formateur" / "sessions").glob("*.md")):
+            build_session(p.stem)

@@ -16,7 +16,6 @@
   .\lab.ps1 chaos reset
   .\lab.ps1 traffic 20           change le débit (req/s)
   .\lab.ps1 batch                batch Pushgateway
-  .\lab.ps1 longterm             Prometheus longue durée (Jour 3)
   .\lab.ps1 snapshot             snapshot TSDB (Jour 3)
 
 .NOTES
@@ -43,22 +42,30 @@ function Show-Urls {
   Write-Host "  Blackbox       http://localhost:9115"
   Write-Host "  Pushgateway    http://localhost:9091"
   Write-Host "  Redis exporter http://localhost:9121   /metrics"
+  Write-Host "  Thanos Query   http://localhost:10902  (TP 10)"
+  Write-Host "  Prometheus B   http://localhost:9092   (TP 10)"
 }
 
 function Post($url) { Invoke-RestMethod -Method Post -Uri $url }
 
 switch ($Command) {
-  "up"     { docker compose up -d --build; Write-Host "`nStack démarrée. Comptez ~30 s pour que Grafana soit prêt."; Show-Urls }
+  "up"     {
+    if (-not (docker compose config --services)) { Write-Host "Aucune brique activée : décommentez des lignes 'include' dans docker-compose.yml (exercice 1.7)."; exit 1 }
+    docker compose up -d --build --remove-orphans; Write-Host "`nStack démarrée. Comptez ~30 s pour que Grafana soit prêt."; Show-Urls
+  }
   "down"   { docker compose --profile "*" down }
-  "reset"  { docker compose --profile "*" down -v }
+  "reset"  {
+    docker compose --profile "*" down -v
+    docker volume ls -q | Where-Object { $_ -match 'prometheus-b-data|thanos-bucket|prometheus-data|grafana-data|alertmanager-data' } | ForEach-Object { docker volume rm -f $_ | Out-Null }
+  }
   "status" { docker compose ps; Show-Urls }
   "reload" {
     Post "http://localhost:9090/-/reload" | Out-Null; Write-Host "Prometheus rechargé"
-    Post "http://localhost:9093/-/reload" | Out-Null; Write-Host "Alertmanager rechargé"
+    if ((docker compose ps --services --status running) -contains "alertmanager") { Post "http://localhost:9093/-/reload" | Out-Null; Write-Host "Alertmanager rechargé" }
   }
   "check" {
     docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
-    docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
+    if ((docker compose ps --services --status running) -contains "alertmanager") { docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml }
   }
   "test"  { docker compose exec prometheus sh -c 'cd /etc/prometheus/tests && promtool test rules *.yml' }
   "logs"  { docker compose logs -f $Arg1 }
@@ -75,7 +82,6 @@ switch ($Command) {
   }
   "traffic"  { $env:TRAFFIC_RPS = if ($Arg1) { $Arg1 } else { "6" }; docker compose up -d traffic; Write-Host "Trafic réglé à $env:TRAFFIC_RPS req/s" }
   "batch"    { docker compose --profile batch run --rm batch-job }
-  "longterm" { docker compose --profile longterm up -d prometheus-longterm; Write-Host "Prometheus longue durée : http://localhost:9095" }
   "snapshot" { Post "http://localhost:9090/api/v1/admin/tsdb/snapshot" }
   default    { Get-Help $PSCommandPath -Examples }
 }

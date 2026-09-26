@@ -1,4 +1,4 @@
-{{/* Modèles de notification personnalisés — utilisés dans le TP 7 (bonus) */}}
+{{/* Modèles de notification personnalisés — utilisés dans le TP 7, partie 4 */}}
 {{ define "formation.title" }}[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}{{ end }}
 
 {{ define "formation.text" }}

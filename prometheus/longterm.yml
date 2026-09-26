@@ -1,9 +1,0 @@
-# Prometheus "longue durée" (Jour 3) : il ne collecte rien lui-même,
-# il reçoit les échantillons envoyés par le Prometheus principal via remote_write.
-global:
-  scrape_interval: 1m
-  external_labels:
-    cluster: formation
-    role: longterm
-
-scrape_configs: []

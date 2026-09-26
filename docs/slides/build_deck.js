@@ -5,6 +5,7 @@ const path = require("path");
 const IMG = path.join(__dirname, "..", "formateur", "img");
 const ASSETS = path.join(__dirname, "..", "assets");
 const HERE = __dirname;
+const DIAG = path.join(__dirname, "..", "diagrams");
 
 const C = { navy: "0F2A4A", navy2: "163D6B", orange: "F15A22", ink: "1B1F2A", muted: "5B6270", line: "E3E6EB", panel: "F4F5F7", white: "FFFFFF", light: "DBE6F3", peach: "FFB48F", green: "1B7F3B", red: "B3261E" };
 const FONT = "Calibri";
@@ -165,11 +166,16 @@ function exercises(t, items, note) {
 }
 function image(t, img, caption, note, opts = {}) {
   const s = base();
-  title(s, t);
-  s.addImage({ path: img, x: 0.5, y: 1.25, w: 9, h: 3.6, sizing: { type: "contain", w: 9, h: 3.6 } });
+  title(s, t, false, opts.sub);
+  const y0 = opts.sub ? 1.5 : 1.25;
+  s.addImage({ path: img, x: 0.5, y: y0, w: 9, h: 4.85 - y0, sizing: { type: "contain", w: 9, h: 4.85 - y0 } });
   if (caption) s.addText(caption, { x: 0.5, y: 4.9, w: 9, h: 0.3, fontFace: FONT, fontSize: 11, color: C.muted, italic: true, align: "center", isTextBox: true, margin: 0 });
   if (note) notes(s, note);
   return s;
+}
+// Schéma "à la main" (docs/diagrams, généré par build_diagrams.js) : image 2,5:1 pleine largeur
+function diagram(t, name, caption, note, opts = {}) {
+  return image(t, path.join(DIAG, name + ".png"), caption, note, opts);
 }
 function arrow(s, x1, y1, x2, y2, color = C.muted) {
   s.addShape(pres.ShapeType.line, { x: x1, y: y1, w: x2 - x1, h: y2 - y1, line: { color, width: 1.75, endArrowType: "triangle" } });
@@ -216,28 +222,16 @@ cards("Ce que je vous promets pour mercredi soir", [
   { h: "Réagir", p: "Diagnostiquer une panne de la boutique en moins de cinq minutes. Et avoir été prévenu par Teams avant le client." },
 ], { note: "La promesse est concrète et mesurable : le war game de mercredi 17h la vérifie." });
 table("Trois jours, un fil rouge", ["", "Matin", "Après-midi"], [
-  ["Jour 1 · Voir", "Observabilité, architecture, installation, configuration, service discovery", "Exporters, Node Exporter (TP 1), instrumentation et services tiers (TP 2)"],
+  ["Jour 1 · Voir", "Observabilité, architecture, Prometheus et Grafana installés à la main, configuration", "Passage aux conteneurs, exporters, Node Exporter (TP 1), instrumentation et services tiers (TP 2)"],
   ["Jour 2 · Comprendre", "PromQL de A à Z, 22 exercices, recording rules et tests (TP 3)", "Grafana 13, dashboard serveur Linux (TP 4), dashboard boutique + as code (TP 5), droits"],
-  ["Jour 3 · Réagir", "Alertes, Alertmanager (TP 6), Slack / PagerDuty / Teams / GitHub, alerte CPU → Teams (TP 7)", "Alerting Grafana (TP 8), performances, sauvegarde et remote write (TP 9), échelle, war game"],
+  ["Jour 3 · Réagir", "Alertes, Alertmanager (TP 6), Slack / PagerDuty / Teams / GitHub, alerte CPU → Teams (TP 7)", "Alerting Grafana (TP 8), performances, sauvegarde (TP 9), échelle, Thanos (TP 10), war game"],
 ], { colW: [1.6, 3.7, 3.7], size: 12, rowH: 0.75, note: "9h-17h30, déjeuner 12h30-14h, deux pauses. Jamais plus de 20 minutes sans clavier." });
-{
-  const s = base();
-  title(s, "Le lab : une boutique en ligne qu'on va casser", false, "Tout en conteneurs · Codespaces, macOS, Windows · rien à installer à part Docker");
-  box(s, 0.5, 1.75, 1.7, 0.7, "traffic\n(clients simulés)", C.muted, C.white, 11);
-  box(s, 2.7, 1.55, 1.9, 0.5, "shop-api-1", C.navy2);
-  box(s, 2.7, 2.15, 1.9, 0.5, "shop-api-2", C.navy2);
-  box(s, 2.7, 2.9, 1.9, 0.5, "Redis + exporter", "4A6FA5");
-  box(s, 2.7, 3.5, 1.9, 0.5, "Node Exporter", "4A6FA5");
-  box(s, 2.7, 4.1, 1.9, 0.5, "Blackbox · Pushgateway", "4A6FA5", C.white, 10);
-  box(s, 5.3, 2.3, 1.9, 1.0, "Prometheus", C.orange, C.white, 15);
-  box(s, 7.7, 1.6, 1.8, 0.8, "Grafana", C.navy, C.white, 14);
-  box(s, 7.7, 2.9, 1.8, 0.8, "Alertmanager", C.navy, C.white, 13);
-  box(s, 7.7, 4.1, 1.8, 0.6, "Inbox (Teams / Slack)", "6264A7", C.white, 10);
-  arrow(s, 2.2, 2.1, 2.7, 2.0); arrow(s, 5.3, 2.8, 4.6, 1.85); arrow(s, 5.3, 2.85, 4.6, 2.4); arrow(s, 5.3, 2.9, 4.6, 3.15); arrow(s, 5.3, 2.95, 4.6, 3.75); arrow(s, 5.3, 3.0, 4.6, 4.35);
-  arrow(s, 7.7, 2.0, 7.2, 2.6); arrow(s, 7.2, 3.0, 7.7, 3.2); arrow(s, 8.6, 3.7, 8.6, 4.1);
-  s.addText("lab.sh up · status · check · reload · test · chaos · traffic · batch · longterm · snapshot", { x: 0.5, y: 4.85, w: 9, h: 0.3, fontFace: "Courier New", fontSize: 11, color: C.navy, isTextBox: true, margin: 0 });
-  notes(s, "Je montre le dashboard Boutique tout vert, puis ./lab.sh chaos errors on. À la pause, il sera rouge : voilà ce qu'on saura construire mercredi.");
-}
+diagram("Le lab : une boutique en ligne qu'on va casser", "lab-architecture",
+  "Codespaces, macOS, Windows · rien à installer à part Docker · lab.sh up · status · check · reload · test · chaos · traffic · batch · snapshot",
+  "Rien ne tourne au départ : ce schéma, c'est ce qu'on aura construit mercredi. Je montre mon dashboard Boutique tout vert, puis ./lab.sh chaos errors on. À la pause, il sera rouge : voilà ce qu'on saura construire.");
+diagram("Une brique à la fois", "briques",
+  "Le matin en binaire, l'après-midi en conteneur, une brique par exercice. Personne ne reçoit une stack toute faite.",
+  "La règle des trois jours. docker-compose.yml ne contient que des include commentés ; chaque exercice dit lequel décommenter. Le dernier après-midi, on ajoute un Thanos complet.");
 
 // ===========================================================================
 // JOUR 1
@@ -249,39 +243,20 @@ section("MODULE 1", "Pourquoi l'observabilité", "Monitoring, observabilité, le
 twoCol("Les deux pilotes", { h: "Pilote A — monitoring", items: ["Un voyant rouge « MOTEUR » s'allume", "Il sait que c'est grave", "Il ne sait pas pourquoi", "Il panique"] },
   { h: "Pilote B — observabilité", items: ["Un écran : pression d'huile −40 %, vibration axe Z", "Il coupe le moteur concerné", "Il compense, il se pose", "Notre métier : fabriquer l'écran"] },
   { leftColor: C.panel, rightColor: C.navy, note: "Définition utilisable : un système est observable quand « pourquoi c'est lent ? » a une réponse en moins de cinq minutes." });
-cards("Les trois signaux", [
-  { h: "Métriques", p: "Des nombres horodatés. Quelques octets par point, agrégeables, parfaites pour les tendances et les alertes. Notre sujet pendant trois jours." },
-  { h: "Logs", p: "Des événements textuels. Riches, mais chers à stocker et à chercher. Loki côté Grafana." },
-  { h: "Traces", p: "Le parcours d'une requête à travers les services. Indispensables en microservices. Tempo, OpenTelemetry." },
-], { note: "Pourquoi les métriques d'abord : une métrique coûte quelques octets, un log des centaines. Et c'est sur les métriques qu'on alerte." });
+diagram("Les trois signaux", "trois-signaux", null, "Pourquoi les métriques d'abord : une métrique coûte quelques octets, un log des centaines. Et c'est sur les métriques qu'on alerte. Logs et traces : Loki et Tempo, la suite logique de cette formation.");
 statement("Black Friday. Tous les voyants infra au vert.\nChiffre d'affaires de la journée : zéro.", "Un bug JavaScript sur le bouton « Payer ». Personne n'avait de métrique « commandes par minute ».", "Anecdote fondatrice : surveiller la machine ne suffit jamais. C'est pour ça que la boutique expose shop_orders_total et shop_revenue_euros_total.");
-twoCol("Pull contre push", { h: "Push — l'ancien monde", items: ["Un agent envoie ses données au serveur", "Le livreur de pizza : mille serveurs en panne = mille livreurs qui sonnent en même temps", "Le monitoring tombe quand on en a besoin"] },
-  { h: "Pull — Prometheus", items: ["Prometheus va chercher (scrape) les métriques en HTTP, à intervalle fixe", "Le buffet à volonté : il se sert à son rythme", "Une cible qui ne répond pas, c'est une information : up == 0", "Débogage au curl"] },
-  { rightColor: C.navy, note: "Le push garde un cas d'usage : les jobs éphémères, via la Pushgateway (TP 2)." });
+diagram("Pull contre push", "pull-push", null, "Push : un agent envoie ses données au serveur ; mille serveurs en panne = mille livreurs qui sonnent en même temps, le monitoring tombe quand on en a besoin. Pull : Prometheus va chercher les métriques en HTTP à intervalle fixe, se sert à son rythme, et une cible qui ne répond pas est une information (up == 0) ; on débogue au curl. Le push garde un cas d'usage : les jobs éphémères, via la Pushgateway (TP 2).");
 cards("Un peu d'histoire, vite", [
   { h: "2012 — SoundCloud", p: "Inspiré de Borgmon (Google). Open source en 2015." },
   { h: "2016 — CNCF", p: "Deuxième projet accueilli après Kubernetes. Gradué en 2018. Le standard de fait." },
-  { h: "2024 — Prometheus 3", p: "UTF-8, OTLP natif, remote write 2.0, nouvelle interface. On travaille sur la 3.15 (sept. 2026)." },
+  { h: "2024 — Prometheus 3", p: "UTF-8, OTLP natif, remote write 2.0, nouvelle interface. On travaille sur la 3.13, la LTS (juillet 2026 → juillet 2027)." },
   { h: "Grafana", p: "Né en 2014, fork de Kibana 3. N'importe quelle source, ne stocke rien. Version 13 depuis avril 2026, on utilise la 13.2." },
 ], { grid: true });
 
 // Module 2
 section("MODULE 2", "Architecture de Prometheus", "Les composants, le modèle de données, les quatre types de métriques.");
-{
-  const s = base();
-  title(s, "Les composants", false, "Un journaliste qui fait sa tournée toutes les 15 secondes, un rédacteur en chef, une maquette");
-  box(s, 0.5, 2.2, 1.7, 0.9, "Cibles\n/metrics", "4A6FA5", C.white, 12);
-  box(s, 0.5, 3.4, 1.7, 0.7, "Service\ndiscovery", C.muted, C.white, 11);
-  box(s, 3.2, 1.9, 2.6, 1.6, "Prometheus\nscrape · TSDB · règles", C.orange, C.white, 14);
-  box(s, 6.9, 1.7, 2.4, 0.8, "Grafana", C.navy, C.white, 14);
-  box(s, 6.9, 3.0, 2.4, 0.8, "Alertmanager", C.navy, C.white, 14);
-  box(s, 6.9, 4.1, 2.4, 0.6, "Slack · Teams · PagerDuty", C.muted, C.white, 11);
-  arrow(s, 3.2, 2.65, 2.2, 2.65); arrow(s, 2.2, 3.75, 3.2, 3.2); arrow(s, 6.9, 2.1, 5.8, 2.4); arrow(s, 5.8, 3.1, 6.9, 3.4); arrow(s, 8.1, 3.8, 8.1, 4.1);
-  s.addText("PromQL", { x: 5.9, y: 1.85, w: 0.9, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
-  s.addText("alertes", { x: 5.9, y: 3.25, w: 0.9, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
-  s.addText("pull HTTP\ntoutes les 15 s", { x: 2.25, y: 2.05, w: 0.95, h: 0.5, fontFace: FONT, fontSize: 9, color: C.muted, isTextBox: true, margin: 0 });
-  notes(s, "Je dessine au tableau dans cet ordre : cibles, serveur (scraper, stocker, évaluer), Alertmanager, Grafana, découverte de services.");
-}
+diagram("Les composants", "composants", "Un journaliste qui fait sa tournée toutes les 15 secondes, un rédacteur en chef, une maquette",
+  "Je dessine au tableau dans cet ordre : cibles, serveur (scraper, stocker, évaluer), Alertmanager, Grafana, découverte de services.");
 code("Le modèle de données", `http_requests_total{method="GET", route="/api/products", status="200"} 51
 
   métrique : http_requests_total
@@ -310,30 +285,33 @@ http_request_duration_seconds_bucket{route="/api/checkout",le="0.25"} 17
 http_request_duration_seconds_bucket{route="/api/checkout",le="+Inf"} 17
 http_request_duration_seconds_sum{route="/api/checkout"} 1.83
 http_request_duration_seconds_count{route="/api/checkout"} 17`, ["HELP, TYPE, puis une ligne par série", "N'importe quel langage peut produire ça avec un printf", "Les buckets sont cumulatifs : le=\"0.25\" compte tout ce qui est sous 250 ms"], { size: 10, note: "Je montre localhost:5001/metrics en vrai, puis Status → Target health." });
-cards("La TSDB en deux mots", [
-  { h: "Head (mémoire)", p: "Les échantillons arrivent dans un bloc en mémoire, journalisés dans le WAL pour survivre à un crash." },
-  { h: "Blocs (disque)", p: "Toutes les deux heures, un bloc immuable. Compression : 1 à 2 octets par échantillon. Rétention par défaut 15 jours." },
-  { h: "Grafana", p: "Ne voit jamais les cibles. Il interroge Prometheus en PromQL. « No data » ? On teste la requête dans Prometheus d'abord." },
-], { note: "Détail de la TSDB au jour 3." });
+diagram("Le chemin d'un échantillon : la TSDB", "tsdb", "Grafana ne voit jamais les cibles : il interroge Prometheus en PromQL. « No data » ? On teste la requête dans Prometheus d'abord.",
+  "Head en mémoire + WAL, un bloc immuable toutes les deux heures, compaction, rétention 15 jours. On y revient au jour 3 (snapshot, Thanos envoie ces blocs dans un bucket).");
 
 // Module 3
-section("MODULE 3", "Installation et prise en main", "Comment on installe pour de vrai, et l'environnement du lab.");
+section("MODULE 3", "Installer à la main", "Un binaire, un YAML, un dossier de données. Puis Grafana, branché en cliquant.");
 table("Cinq façons d'installer Prometheus", ["Méthode", "Quand", "Note"], [
   ["Kubernetes + opérateur", "Le cas majoritaire en production", "kube-prometheus-stack, ServiceMonitor, PrometheusRule"],
-  ["Conteneur Docker", "Labs, petits sites, notre cas", "prom/prometheus:v3.15.0 + un YAML monté"],
-  ["Binaire", "Pour comprendre", "Un exécutable Go, un YAML, un dossier data/"],
+  ["Conteneur Docker", "Labs, petits sites : cet après-midi", "quay.io/prometheus/prometheus:v3.13.3 + un YAML monté"],
+  ["Binaire", "Pour comprendre : maintenant", "Un exécutable Go, un YAML, un dossier data/"],
   ["Paquet distribution", "À éviter", "Souvent plusieurs versions de retard"],
   ["Managé", "Quand on ne veut pas opérer", "Grafana Cloud, AMP, GMP, Mimir/Thanos/VictoriaMetrics"],
 ], { colW: [2.3, 2.8, 3.9], size: 12.5, rowH: 0.5, note: "Même chose pour Grafana : Helm, Docker, dépôts Grafana Labs (à jour), Cloud." });
+cards("Quelle version ? La question qu'on oublie", [
+  { h: "Prometheus : une mineure toutes les 6 semaines", p: "3.12 en mai, 3.13 en juillet, 3.14 en août, 3.15 le 24 septembre. Une mineure n'est plus corrigée dès que la suivante sort." },
+  { h: "LTS : une par an, corrigée un an", p: "Sécurité et bugs graves pendant douze mois, un mois de recouvrement. LTS en cours : 3.13 (1er juillet 2026 → 31 juillet 2027), déjà en 3.13.3. Avant : 3.5, fin de vie." },
+  { h: "La règle", p: "Suivre la LTS, appliquer ses patchs dans le mois. Une mineure hors LTS seulement pour une fonctionnalité indispensable. Jamais une version de moins d'un mois." },
+  { h: "Grafana : pas de LTS", p: "Une majeure par an (avril), une mineure tous les deux mois, patchs mensuels (+security). Mineure supportée 9 mois, dernière mineure d'une majeure 15 mois. Suivre les mineures avec un mois de retard." },
+], { grid: true, note: "Question à la salle : qui sait quelle version tourne chez vous ? Anecdote de la 2.37 jamais mise à jour. Le lab tourne en 3.13.3 : c'est un choix, pas un oubli." });
 twoCol("Les fichiers et dossiers qui comptent", { h: "Prometheus", items: ["prometheus.yml : la configuration", "--storage.tsdb.path (data/) : la base", "--storage.tsdb.retention.time (15d)", "--web.enable-lifecycle : reload par HTTP", "Port 9090, pas d'authentification"] },
-  { h: "Grafana", items: ["grafana.ini ou variables GF_SECTION_CLE", "/var/lib/grafana : grafana.db (SQLite), plugins", "/etc/grafana/provisioning : datasources, dashboards, alerting en YAML", "Port 3000, compte admin"] },
-  { note: "J'ouvre docker-compose.yml et je commente les flags de Prometheus : lifecycle, admin-api, remote-write-receiver, external-url." });
-exercises("Exercices 1.1 à 1.4 — prise en main (40 min)", [
-  ["1.1", "Démarrer la stack, vérifier les conteneurs, compter les cibles UP"],
-  ["1.2", "Lire /metrics : un exemple de chaque type, les buckets, la version"],
-  ["1.3", "L'interface : configuration, version, TSDB status, première requête"],
-  ["1.4", "Filtrer : par instance, par code d'erreur (regex), par méthode et route"],
-], "Je passe dans les rangs. Erreurs classiques : port pris, Docker pas lancé, politique d'exécution PowerShell.");
+  { h: "Grafana", items: ["conf/defaults.ini (jamais modifié), custom.ini ou variables GF_SECTION_CLE", "data/ : grafana.db (SQLite), plugins", "conf/provisioning : datasources, dashboards, alerting en YAML", "Port 3000, compte admin, --homepath"] },
+  { note: "Rien avant les exercices : je fais avec eux, terminal projeté, au même rythme." });
+exercises("Exercices 1.1 à 1.4 — installer à la main (50 min)", [
+  ["1.1", "Releases GitHub : dernière version, LTS ; install/download.sh, prometheus.yml à un job, ./prometheus, data/"],
+  ["1.2", "Lire localhost:9090/metrics : un exemple de chaque type, les buckets, ~700 séries"],
+  ["1.3", "L'interface : configuration, version, TSDB status, up, filtres, onglet Explain"],
+  ["1.4", "Grafana en binaire (--homepath), datasource cliquée, Explore, data/grafana.db"],
+], "Je passe dans les rangs. Erreurs classiques : Gatekeeper sur Mac, chemin ..\\..\\ sous Windows, Grafana sans --homepath, onglet Ports sur Codespaces.");
 
 // Module 4
 section("MODULE 4", "Configuration de Prometheus", "Lire et modifier prometheus.yml en sécurité.");
@@ -346,29 +324,30 @@ code("Anatomie de prometheus.yml", `global:
 rule_files:
   - rules/*.yml
 
-alerting:
+alerting:                   # commenté jusqu'au jour 3
   alertmanagers:
     - static_configs:
         - targets: ["alertmanager:9093"]
 
 scrape_configs:
-  - job_name: shop-api
+  - job_name: prometheus
     static_configs:
-      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+      - targets: ["localhost:9090"]
         labels:
-          env: formation`, ["Quatre blocs", "Un job = des cibles de même nature", "job et instance ajoutés automatiquement", "Fenêtre de rate() ≥ 4 × scrape_interval"], { size: 10.5, note: "Trop vite = surcharge, trop lent = pics ratés. 15 s est le standard." });
+          env: formation`, ["Quatre blocs", "Un job = des cibles de même nature", "job et instance ajoutés automatiquement", "Fenêtre de rate() ≥ 4 × scrape_interval", "Reload : kill -HUP, ou /-/reload avec --web.enable-lifecycle"], { size: 10, note: "Trop vite = surcharge, trop lent = pics ratés. 15 s est le standard. Le fichier du dépôt ne contient qu'un job : les autres, c'est nous." });
 cards("Valider, recharger, découvrir", [
-  { h: "Valider avant", p: "promtool check config prometheus.yml. Le nginx -t de Prometheus. Dans le lab : ./lab.sh check." },
-  { h: "Recharger à chaud", p: "curl -X POST /-/reload. Fichier invalide ? L'ancienne config reste, prometheus_config_last_reload_successful passe à 0." },
+  { h: "Valider avant", p: "promtool check config prometheus.yml. Le nginx -t de Prometheus. En conteneur : ./lab.sh check." },
+  { h: "Recharger à chaud", p: "kill -HUP, ou curl -X POST /-/reload. Fichier invalide ? L'ancienne config reste, prometheus_config_last_reload_successful passe à 0." },
   { h: "Service discovery", p: "Kubernetes, Consul, DNS, EC2/Azure/GCE, Docker… et file_sd : un fichier que n'importe quel script écrit, relu sans reload." },
   { h: "Relabeling", p: "Le videur à l'entrée : relabel_configs avant le scrape (cibles), metric_relabel_configs après (séries). On jette avant que ça coûte." },
-], { grid: true, note: "Démo : je casse l'indentation, ./lab.sh check refuse, je répare, ./lab.sh reload, Status → Configuration." });
-exercises("Exercices 1.5 à 1.8 — configuration (40 min)", [
-  ["1.5", "Passer shop-api à 5 s de scrape, vérifier, puis remettre 15 s"],
-  ["1.6", "Casser la config, recharger sans valider, observer la métrique"],
-  ["1.7", "Ajouter l'Inbox par file_sd sans toucher à la liste des jobs"],
-  ["1.8", "Bonus : jeter les métriques Go de l'exporter Redis (drop)"],
-], "Chemins relatifs au dossier prometheus/ (monté dans /etc/prometheus). Erreur classique : chemin absolu de la machine.");
+], { grid: true, note: "Démo sur mon binaire : je casse l'indentation, promtool check config refuse, je répare, kill -HUP, la ligne Completed loading of configuration file." });
+exercises("Exercices 1.5 et 1.6 — configuration (25 min)", [
+  ["1.5", "Scrape à 5 s, promtool check config, kill -HUP (Windows : --web.enable-lifecycle), vérifier, remettre 15 s"],
+  ["1.6", "Casser la config, recharger sans valider, la métrique à 0 ; puis redémarrer : fatal"],
+], "Prometheus est conservateur en marche, intraitable au démarrage. Tout le monde répare avant le déjeuner, les binaires restent lancés.");
+diagram("Exercice 1.7 — Des binaires aux conteneurs", "binaire-conteneur",
+  "Arrêter les binaires · décommenter compose/01-prometheus.yml et 02-grafana.yml · ./lab.sh up · lire ce que le provisioning a fait tout seul",
+  "20 minutes après le déjeuner. La seule différence avec ce matin : le binaire, son YAML et ses données sont dans un conteneur, et le reload passe par HTTP. Piège : port already allocated = un binaire qui tourne encore. À partir d'ici, le fichier à modifier est prometheus/prometheus.yml.");
 
 // Module 5
 section("MODULE 5", "Les exporters", "L'adaptateur de prise universel.");
@@ -386,13 +365,15 @@ twoCol("Node Exporter et le piège Docker", { h: "Node Exporter", items: ["Une s
 twoCol("Blackbox et Pushgateway", { h: "Blackbox Exporter", items: ["Tous les autres disent « je vais bien » de l'intérieur", "Lui teste de l'extérieur, comme un client : 200 ? certificat ? port ouvert ?", "Prometheus l'appelle sur /probe?module=…&target=…", "Le relabeling devient indispensable (TP 2)"] },
   { h: "Pushgateway", items: ["Pour les jobs trop courts pour être scrapés", "Le batch pousse, la gateway garde, Prometheus scrape", "Pas de TTL : elle n'oublie jamais", "Uniquement pour des batchs, jamais pour des services"] },
   { note: "Démo : localhost:9115/probe?module=http_2xx&target=http://shop-api-1:5000/health → probe_success 1." });
+diagram("Comment Prometheus parle au Blackbox", "blackbox-relabel", "Le meilleur exemple de relabeling qui existe : on le décortique règle par règle au TP 2",
+  "Trois règles : la cible devient un paramètre d'URL, puis le label instance, et l'adresse scrapée devient celle de l'exporter. Conséquence : up mesure l'exporter, probe_success mesure la cible.");
 tp("TP 1", "Node Exporter : de la machine à Prometheus", "Vous venez de recevoir un serveur. Avant d'y déployer quoi que ce soit, vous voulez ses signes vitaux dans Prometheus, et pouvoir y ajouter vos propres indicateurs avec un simple script.", [
-  { h: "Brancher", p: "Le job node dans prometheus.yml. Valider, recharger, node_uname_info." },
+  { h: "Brancher", p: "Activer la brique 04, lire ses trois montages, le job node dans prometheus.yml, node_uname_info." },
   { h: "Indicateurs", p: "Uptime, mémoire %, disque %, charge, CPU % (la formule à comprendre). Chaos CPU." },
-  { h: "Collectors", p: "Activer processes, désactiver arp, dans docker-compose.yml." },
+  { h: "Collectors", p: "Activer processes, désactiver arp, dans compose/04-node-exporter.yml." },
   { h: "Textfile", p: "backup.prom déposé par un script : quand a tourné la dernière sauvegarde ?" },
   { h: "Vue globale", p: "topk, réseau, Explore dans Grafana. Bonus : dashboard 1860." },
-], "60 minutes. La formule CPU est la requête la plus recopiée de l'histoire de Prometheus : j'y passe cinq minutes. Anecdote des sauvegardes fantômes.");
+], "55 minutes. La formule CPU est la requête la plus recopiée de l'histoire de Prometheus : j'y passe cinq minutes. Anecdote des sauvegardes fantômes. Bonus 1.8 (relabeling) pour les rapides.");
 
 // Module 6
 section("MODULE 6", "Instrumenter son application", "Whitebox : mettre les sondes à l'intérieur.");
@@ -409,21 +390,23 @@ STOCK  = Gauge("shop_stock_units", "Stock", ["product"])
 HTTP_REQUESTS.labels("POST", "/api/checkout", "201").inc()
 HTTP_DURATION.labels(route="/api/checkout").observe(0.083)
 ORDERS.labels(payment_method="card").inc()
-STOCK.labels(product="clavier").set(84)`, ["Go, Java/Micrometer, Python, Ruby, Rust officiels ; .NET, Node.js, PHP par la communauté", "Tout en mémoire dans le processus : d'où le compteur remis à zéro au redémarrage", "La bibliothèque expose /metrics toute seule"], { size: 10, note: "J'ouvre apps/shop-api/app.py : les déclarations, le middleware after_request, la route checkout, le TODO du TP 2." });
+STOCK.labels(product="clavier").set(84)`, ["Go, Java/Micrometer, Python, Ruby, Rust officiels ; .NET, Node.js, PHP par la communauté", "Tout en mémoire dans le processus : d'où le compteur remis à zéro au redémarrage", "La bibliothèque expose /metrics toute seule"], { size: 10, note: "J'ouvre apps/shop-api/app.py : les déclarations existantes, le middleware _observe, la route checkout, et les cinq TODO que le TP 2 va combler." });
+diagram("Ce que la boutique doit exposer", "red", "RED pour le service, métier pour le directeur commercial : c'est ce que le TP 2 termine dans le code",
+  "L'app est livrée à moitié instrumentée : elle compte les requêtes, il manque la latence, les commandes, le CA, le stock, la version, les vues produit. Cinq TODO.");
 cards("Nommer, découper, ne pas se tuer", [
   { h: "Nommage", p: "snake_case, préfixe du domaine (http_, shop_), unité de base en suffixe (_seconds, _bytes), _total pour les counters. Grafana convertit." },
   { h: "RED et USE", p: "Service : Rate, Errors, Duration. Ressource : Utilisation, Saturation, Errors. Les golden signals de Google SRE." },
   { h: "Labels autorisés", p: "method (5 valeurs), status (10), route en pattern (50). Bornés, stables." },
   { h: "Labels interdits", p: "user_id, session_id, request_id, IP, email, URL réelle, terme de recherche. Un million d'utilisateurs = un million de séries." },
 ], { grid: true, note: "Anecdote du label customer_id : 15 millions de séries, 60 Go de RAM, redémarrages toutes les heures. Les données à forte cardinalité vont dans les logs et les traces." });
-tp("TP 2", "Instrumentation et services tiers", "Le directeur commercial veut savoir quelles fiches produit sont les plus consultées. L'infra veut surveiller Redis. Le support veut être prévenu si le site est inaccessible de l'extérieur. Et il y a ce batch nocturne…", [
-  { h: "Métier", p: "shop_product_views_total dans le code, rebuild, topk." },
-  { h: "Redis", p: "Le job redis, redis_up, commandes par seconde." },
+tp("TP 2", "Application, instrumentation et services tiers", "L'équipe boutique livre son API à moitié instrumentée. Le directeur commercial veut son CA en temps réel et les fiches produit les plus vues. L'infra veut surveiller Redis. Le support veut savoir si le site répond de l'extérieur. Et il y a ce batch nocturne…", [
+  { h: "Brancher", p: "Brique 03 : deux instances + trafic. Le job shop-api. Ce qui existe, ce qui manque." },
+  { h: "Instrumenter", p: "Cinq TODO dans app.py : histogramme, stock, commandes et CA, info, vues produit. Rebuild." },
+  { h: "Redis", p: "Brique 05, le job redis, redis_up, commandes par seconde." },
   { h: "Blackbox", p: "Quatre sondes HTTP et les trois règles de relabeling. up ne veut plus dire ce qu'on croit." },
-  { h: "Batch", p: "./lab.sh batch, honor_labels: true, ancienneté de la sauvegarde." },
-  { h: "Bonus", p: "Cardinalité : les dix métriques les plus lourdes, et 200 routes × 50 instances ?" },
-], "60 minutes. À la fin, prometheus.yml compte sept jobs. Le relabeling blackbox se décortique au tableau, règle par règle.");
-bullets("Récap du jour 1", ["Pull : résilience, up == 0, débogage au curl", "Un Counter ne se lit jamais brut : rate(), increase()", "Une série = nom + labels ; la cardinalité est le seul vrai danger", "promtool check config avant chaque reload", "Exporter = adaptateur ; blackbox : c'est probe_success qui compte, pas up", "honor_labels: true pour la Pushgateway", "Ce soir : sept jobs UP, pas de ./lab.sh reset"], { note: "Quiz à l'oral, réponses au tableau. Je projette le corrigé de prometheus.yml et chacun compare avec le sien." });
+  { h: "Batch", p: "./lab.sh batch, honor_labels, file_sd sur targets/*.yml : relu sans reload." },
+], "60 minutes. À la fin : cinq briques, six jobs, cinq TODO faits. Bonus : cardinalité (200 routes × 50 instances ?). Piège de la partie 2 : relancer sans --build.");
+bullets("Récap du jour 1", ["Un binaire, un YAML, un dossier data/ ; en conteneur, la même chose plus le provisioning", "Pull : résilience, up == 0, débogage au curl", "Un Counter ne se lit jamais brut : rate(), increase()", "Une série = nom + labels ; la cardinalité est le seul vrai danger", "promtool check config avant chaque reload", "Exporter = adaptateur ; blackbox : c'est probe_success qui compte, pas up", "honor_labels: true pour la Pushgateway ; file_sd relu sans reload", "Ce soir : cinq briques, six jobs UP, pas de ./lab.sh reset"], { note: "Quiz à l'oral, réponses au tableau. Je projette les corrigés prometheus.yml et app.py et chacun compare avec le sien." });
 
 // ===========================================================================
 // JOUR 2
@@ -481,7 +464,7 @@ histogram_quantile(0.95,
   sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
 
 # Latence moyenne : vraie, jamais utile pour un SLO
-rate(x_sum[5m]) / rate(x_count[5m])`, ["Sans by (le), la fonction ne peut plus rien faire", "Le p95 est borné par la précision des buckets", "Native histograms : un échantillon par série, buckets exponentiels, encore en feature flag"], { size: 10.5 });
+rate(x_sum[5m]) / rate(x_count[5m])`, ["Sans by (le), la fonction ne peut plus rien faire", "Le p95 est borné par la précision des buckets", "Native histograms : un échantillon par série, buckets exponentiels, stables depuis Prometheus 3.9 (scrape_native_histograms)"], { size: 10.5 });
 code("Dans le temps, entre séries", `max_over_time(shop_cart_items[1h])              # pic d'une gauge
 predict_linear(node_filesystem_avail_bytes[6h], 86400) < 0  # plein demain ?
 changes(shop_chaos_mode[10m])   deriv(…)   avg_over_time(…)
@@ -568,7 +551,13 @@ bullets("Récap du jour 2", ["rate() sur un counter, jamais brut ; fenêtre ≥ 
 // ===========================================================================
 // JOUR 3
 // ===========================================================================
-section("JOUR 3", "Réagir", "Des alertes qui ne réveillent que pour de bonnes raisons, l'exploitation, le passage à l'échelle.");
+section("JOUR 3", "Réagir", "Des alertes qui ne réveillent que pour de bonnes raisons, l'exploitation, le passage à l'échelle avec Thanos.");
+exercises("Exercice 3.0 — Brancher l'Alertmanager (10 min)", [
+  ["1", "Décommenter compose/06-alerting.yml : Alertmanager + Inbox. ./lab.sh up"],
+  ["2", "Décommenter le bloc alerting de prometheus.yml. Valider, recharger"],
+  ["3", "Prometheus → Status → Alertmanager discovery : une cible active"],
+  ["4", "Lire alertmanager/alertmanager.yml : un receiver vers l'Inbox, c'est tout"],
+], "Depuis hier, TargetDown est évaluée mais n'a personne à qui parler : prometheus_notifications_sent_total reste à 0. Ceux qui oublient le reload voient la page vide.");
 section("MODULE 11", "Philosophie de l'alerting", "Symptômes, pas causes. Actionnable, ou pas du tout.");
 twoCol("Mauvaise alerte, bonne alerte", { h: "Cause", items: ["« CPU > 90 % »", "Peut-être un problème… ou le serveur qui fait son travail", "Réponse quand ça sonne : « je regarde »", "C'est un panel, pas une alerte"] },
   { h: "Symptôme", items: ["« Les clients attendent plus de 3 s »", "« 5 % des paiements échouent »", "Quelqu'un souffre, il faut agir", "Un runbook, un responsable, une sévérité"] },
@@ -590,6 +579,8 @@ code("Anatomie d'une règle", `groups:
           summary: "Taux d'erreur élevé sur {{ $labels.instance }}"
           description: "{{ $value | humanizePercentage }} des requêtes échouent."
           runbook_url: "https://…/shop-errors.md"`, ["Une alerte par série renvoyée : by (instance) → une par instance", "Labels : pour router. Annotations : pour les humains", "Templates Go : $labels, $value, humanize*, printf", "promtool check rules, promtool test rules"], { size: 10 });
+diagram("Le cycle de vie d'une alerte", "cycle-alerte", "inactive → pending (for) → firing → Alertmanager → group_wait, group_interval, repeat_interval",
+  "Chaque paramètre a un coût en réactivité, et ils s'additionnent. Au TP 6, on chronomètre chaque étape avec le chaos.");
 
 section("MODULE 12", "Alertmanager", "Qui prévenir, quand, combien de fois.");
 code("L'arbre de routage", `route:                       # la racine reçoit tout
@@ -609,6 +600,8 @@ inhibit_rules:
   - source_matchers: [alertname = TargetDown]
     target_matchers: [alertname =~ "ShopHighErrorRate|ShopCheckoutSlow"]
     equal: [instance]`, ["Première route qui matche, sauf continue: true", "Regroupement : 50 instances down = 1 notification", "Inhibition : serveur éteint, inutile de dire qu'il est lent", "Silences et time_intervals : maintenances, week-ends"], { size: 10, note: "Démo : localhost:9093, amtool config routes show, amtool config routes test severity=critical." });
+diagram("L'arbre de routage, en image", "arbre-routage", "Première route qui matche, sauf continue: true · regroupement, inhibition, silences, plages horaires",
+  "C'est l'arbre qu'on construit au TP 6 : astreinte en Teams pour le critique, boutique en Slack, infra dans l'Inbox avec un mute le week-end.");
 image("Alertmanager en action", path.join(IMG, "alertmanager-alerts.png"), "Groupes par receiver, silences, inhibitions", "Je démarre le module en arrêtant shop-api-2 : pending, firing, notification dans l'Inbox, resolved au redémarrage.");
 tp("TP 6", "Alertes Prometheus et routage Alertmanager", "L'équipe boutique veut son canal. L'astreinte veut uniquement le critique, tout de suite. L'infra ne veut rien le week-end sauf le critique. Et personne ne veut « erreurs sur shop-api-2 » quand shop-api-2 est éteint.", [
   { h: "Alertes", p: "ShopHighErrorRate, ShopCheckoutSlow, ShopNoOrders (and), ShopStockLow, BlackboxProbeFailed." },
@@ -622,7 +615,7 @@ section("MODULE 13", "Notifications tierces et ChatOps", "Slack, PagerDuty, Team
 twoCol("Slack et PagerDuty", { h: "Slack", items: ["Incoming webhook (api_url_file) ou application avec token", "channel, title, text templatables", "Le secret dans un fichier, jamais dans le YAML commité"] },
   { h: "PagerDuty", items: ["Events API v2, une integration key par service", "routing_key_file, severity, description", "Escalade, plannings, acquittement côté PagerDuty", "trigger / resolve avec la même clé de déduplication"] });
 cards("Microsoft Teams, la méthode 2026", [
-  { n: 1, h: "Les connecteurs Office 365 sont morts", p: "Création bloquée depuis 2024, arrêt définitif fin 2025. msteams_configs est déprécié." },
+  { n: 1, h: "Les connecteurs Office 365 sont morts", p: "Création bloquée depuis 2024, coupure définitive en mai 2026. msteams_configs est déprécié." },
   { n: 2, h: "Workflows (Power Automate)", p: "Dans le canal : … → Workflows → « Post to a channel when a webhook request is received ». Copier l'URL." },
   { n: 3, h: "Alertmanager et Grafana", p: "msteamsv2_configs: webhook_url_file. Contact point Microsoft Teams, champ URL. La carte adaptative est générée." },
   { n: 4, h: "Pièges", p: "Canal privé : Post as User. Rien n'arrive ? Historique du flux dans Power Automate. L'Inbox du lab imite le flux." },
@@ -665,45 +658,28 @@ cards("Déployer proprement", [
   { h: "Mode agent", p: "--agent : scrape et remote_write, sans stockage ni requêtes. Sites distants, edge. Grafana Alloy fait pareil (et logs, traces, OTLP)." },
   { h: "Conventions", p: "Nommage, labels env / team / service partout, un runbook par alerte, tests de règles en CI, tout provisionné." },
 ], { grid: true });
-exercises("Exercices 3.1 à 3.5 — diagnostic (15 min)", [
+exercises("Exercices 3.1 à 3.5 — diagnostic (10 min)", [
   ["3.1", "Séries actives, métrique et label les plus lourds"], ["3.2", "Échantillons par seconde, mémoire de Prometheus"], ["3.3", "Le job le plus cher, le plus lent"],
   ["3.4", "sample_limit: 100 sur redis : que devient up ?"], ["3.5", "?stats=all : brute contre recording rule"],
 ]);
-tp("TP 9", "Sauvegarde, restauration, longue durée, sécurité", "L'audit demande : si le serveur de monitoring brûle, en combien de temps le remettez-vous ? Avez-vous 13 mois d'historique ? Qui peut lire vos métriques ?", [
+tp("TP 9", "Sauvegarde, restauration, sécurité", "L'audit demande : si le serveur de monitoring brûle, en combien de temps le remettez-vous ? Qui peut lire vos métriques ? (Et les 13 mois d'historique, c'est le TP 10.)", [
   { h: "Snapshot", p: "./lab.sh snapshot, catastrophe simulée, restauration, qu'a-t-on perdu ?" },
   { h: "Grafana", p: "grafana.db, export de tous les dashboards par l'API. Ce qui n'y est pas. La vraie réponse : Git." },
-  { h: "Remote write", p: "./lab.sh longterm, ne garder que shop_* et les recording rules, retard de la file." },
-  { h: "Basic auth", p: "Bonus : web.yml bcrypt, --web.config.file, qu'est-ce qui casse ? Réparer, puis retirer." },
-], "45 minutes. Un snapshot = liens durs vers les blocs + le head : instantané. Ne jamais copier data/ à chaud sans snapshot.");
+  { h: "Basic auth", p: "web.yml bcrypt, --web.config.file dans la brique 01, qu'est-ce qui casse ? Réparer, puis retirer." },
+], "30 minutes. Un snapshot = liens durs vers les blocs + le head : instantané. Ne jamais copier data/ à chaud sans snapshot.");
 
 section("MODULE 16", "Mise à l'échelle et écosystème", "Quand un Prometheus ne suffit plus, et où va tout ça.");
-{
-  const s = base();
-  title(s, "Les options, dans l'ordre", false, "Réduire d'abord (cardinalité, drop, agrégation). Ensuite seulement, agrandir.");
-  const steps = [["1", "Sharding fonctionnel", "Un Prometheus par équipe, par cluster, par type. Simple, robuste, vues séparées."], ["2", "Fédération", "Un central scrape /federate des régionaux, sur des recording rules agrégées. Vue globale légère."], ["3", "Remote write", "Mimir (le moteur de Grafana Cloud), Thanos (sidecar + stockage objet), VictoriaMetrics (économe). API compatible : Grafana ne voit pas la différence."], ["4", "Managé", "Grafana Cloud, Amazon, Google, Azure Monitor managed Prometheus."]];
-  steps.forEach((st, i) => {
-    const y = 1.65 + i * 0.85;
-    s.addShape(pres.ShapeType.ellipse, { x: 0.5, y: y + 0.05, w: 0.5, h: 0.5, fill: { color: C.orange }, line: { color: C.orange } });
-    s.addText(st[0], { x: 0.5, y: y + 0.05, w: 0.5, h: 0.5, fontFace: FONT, fontSize: 14, bold: true, color: C.white, align: "center", valign: "middle", isTextBox: true, margin: 0 });
-    s.addText(st[1], { x: 1.2, y, w: 2.4, h: 0.6, fontFace: FONT, fontSize: 15, bold: true, color: C.navy, isTextBox: true, margin: 0, valign: "middle" });
-    s.addText(st[2], { x: 3.7, y, w: 5.8, h: 0.7, fontFace: FONT, fontSize: 12.5, color: C.ink, isTextBox: true, margin: 0, valign: "middle" });
-  });
-  notes(s, "Les signaux : OOM et compactions → trop de séries. > 30-60 jours → longue durée. Multi-sites → central. HA vraie → duo ou stockage distribué.");
-}
-{
-  const s = base();
-  title(s, "Le schéma cible", false, "Du brut en local, de l'agrégé au loin, une seule interface pour tout lire");
-  ["Site A", "Site B", "Cluster K8s"].forEach((n, i) => box(s, 0.5, 1.7 + i * 1.05, 1.9, 0.75, `Prometheus\n${n}`, C.orange, C.white, 11));
-  box(s, 4.0, 2.1, 2.4, 1.3, "Mimir · Thanos\nVictoriaMetrics", C.navy, C.white, 13);
-  box(s, 4.0, 3.75, 2.4, 0.6, "Stockage objet (S3)", C.muted, C.white, 11);
-  box(s, 7.5, 2.3, 2.0, 0.9, "Grafana", C.navy2, C.white, 14);
-  [1.7, 2.75, 3.8].forEach((y) => arrow(s, 2.4, y + 0.37, 4.0, 2.75));
-  arrow(s, 5.2, 3.4, 5.2, 3.75); arrow(s, 6.4, 2.75, 7.5, 2.75);
-  s.addText("remote_write", { x: 2.55, y: 1.55, w: 1.4, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
-  s.addText("PromQL", { x: 6.55, y: 2.4, w: 0.9, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
-  s.addText("Rétention courte (7-15 j) et toutes les séries brutes sur chaque Prometheus · rétention longue (13 mois) et vue globale au centre · les API sont compatibles, Grafana ne voit pas la différence.", { x: 0.5, y: 4.55, w: 9, h: 0.55, fontFace: FONT, fontSize: 12, color: C.ink, isTextBox: true, margin: 0 });
-  notes(s, "Le mode agent ou Alloy sur les sites distants remplace un Prometheus complet quand on ne veut rien stocker localement.");
-}
+diagram("Les options, dans l'ordre", "echelle", "Réduire d'abord (cardinalité, drop, agrégation). Ensuite seulement, agrandir.",
+  "Les signaux : OOM et compactions → trop de séries. > 30-60 jours → longue durée. Multi-sites → central. HA vraie → duo + déduplication. Thanos complète les Prometheus (sidecar) ; Mimir et VictoriaMetrics les remplacent comme stockage (remote write). API compatible : Grafana ne voit pas la différence.");
+diagram("Thanos : ce qu'on monte dans cinquante minutes", "thanos", "Sidecars, stockage objet, Store Gateway, Querier avec déduplication, Compactor · tout dans compose/07-thanos.yml",
+  "Les external_labels sont la clé : ils identifient l'origine des blocs, et replica est celui que le Querier ignore pour dédupliquer. Un seul compactor par bucket.");
+tp("TP 10", "Thanos : historique long et vue globale", "La boutique ouvre un second site. Chaque site a son Prometheus, rétention 15 jours. L'audit veut 13 mois d'historique et une vue globale, sans toucher aux Prometheus existants. Tout tourne dans le Codespace.", [
+  { h: "Lire, lancer", p: "compose/07-thanos.yml : qui parle à qui, quel volume partagé. Blocs de 10 min (min = max, obligatoire). Brique 07, ./lab.sh up." },
+  { h: "Querier", p: "Stores, up{job=\"shop-api\"} avec et sans déduplication, où est passé replica, prometheus-b arrêté." },
+  { h: "Grafana", p: "Datasource Thanos, le dashboard TP 5 dessus, pourquoi cluster reste et replica disparaît." },
+  { h: "Bucket", p: "ls /bucket, meta.json, le Store Gateway annonce sa fenêtre, les logs du compactor, rétentions." },
+  { h: "Ranger", p: "Recommenter la brique et les flags, ./lab.sh up : le war game se joue sur la stack du matin." },
+], "50 minutes. Le piège : oublier les flags block-duration ; sans eux le sidecar A refuse de démarrer (min = max obligatoire), docker compose logs thanos-sidecar-a le dit. La partie 4 attend quinze minutes après le lancement.");
 cards("Et autour", [
   { h: "OpenTelemetry", p: "Le standard d'instrumentation des trois signaux. Prometheus 3 reçoit l'OTLP nativement, noms avec points et UTF-8. Collector / Alloy pour scraper, recevoir, envoyer." },
   { h: "Loki et Tempo", p: "Les mêmes idées pour les logs et les traces. Grafana les corrèle : d'un pic de latence aux traces (exemplars) aux logs, en trois clics." },
@@ -715,7 +691,7 @@ tp("WAR GAME", "Diagnostiquer en moins de cinq minutes", "Vous ne touchez plus �
   { h: "Depuis quand ?", p: "L'heure de début, à la minute." },
   { h: "Qui a sonné ?", p: "Quelle alerte a sonné, laquelle aurait dû ?" },
   { h: "Action", p: "La première action. Par écrit." },
-], "15 minutes chrono, par binôme. Puis débrief : qui a trouvé quoi avec quel outil, et ce qui manquait (redis_up, panneau par instance, lien vers les logs).");
+], "12 minutes chrono, par binôme. Puis débrief : qui a trouvé quoi avec quel outil, et ce qui manquait (redis_up, panneau par instance, lien vers les logs).");
 {
   const s = base(true);
   s.addText("Lundi matin", { x: 0.7, y: 0.9, w: 8.6, h: 0.7, fontFace: FONT, fontSize: 32, bold: true, color: C.white, isTextBox: true, margin: 0 });

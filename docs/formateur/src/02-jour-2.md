@@ -25,10 +25,14 @@ versionnés dans Git, et une gestion des droits propre.
 
 ## 9h00 — Rappel et état des lieux (15 min)
 
-Quiz flash à l'oral (cinq questions du récap d'hier). Puis chacun lance `./lab.sh status` et
-vérifie dans Target health que les sept jobs sont UP. Ceux qui ont un trou copient
-`solutions/jour-1/prometheus.yml`... que je ne distribue pas : je projette le corrigé et ils
-complètent. Cinq minutes maximum, on a du PromQL à faire.
+Quiz flash à l'oral (cinq questions du récap d'hier). Puis chacun lance `./lab.sh up` (le
+Codespace a peut-être redémarré, les cinq briques d'hier sont toujours décommentées) puis
+`./lab.sh status`, et vérifie dans Target health que les six jobs (`prometheus`, `node`,
+`shop-api`, `redis`, `blackbox-http`, `pushgateway`) sont UP et que `shop-api-1:5000/metrics`
+expose bien `shop_orders_total`, `shop_stock_units` et `http_request_duration_seconds_bucket` :
+tout le PromQL du matin s'appuie sur les métriques qu'ils ont écrites hier. Ceux qui ont un trou
+copient `solutions/jour-1/prometheus.yml` ou `app.py`... que je ne distribue pas : je projette le
+corrigé et ils complètent. Cinq minutes maximum, on a du PromQL à faire.
 
 Je vérifie que chacun a au moins une heure d'historique ; sinon, rien de grave, les fenêtres
 `[5m]` fonctionneront quand même.
@@ -124,7 +128,7 @@ projette le corrigé d'un ou deux exercices.
 **Énoncés et corrigés.**
 
 **2.1** — Toutes les cibles et leur état.
-`up` — 11 séries (tous les jobs du jour 1, dont quatre sondes blackbox), valeur 1 partout si
+`up` — 10 séries (tous les jobs du jour 1, dont quatre sondes blackbox), valeur 1 partout si
 tout va bien. `up{job="shop-api"}` : 2.
 
 **2.2** — Les requêtes HTTP en erreur (4xx ou 5xx) sur la boutique, sans le `/metrics`.
@@ -534,7 +538,7 @@ Une visite de Grafana 13 en cinq minutes, en projetant :
 
 ## TP 4 — Un tableau de bord paramétrable pour un serveur Linux (60 min)
 
-**Objectif.** Le cas pratique du programme. Dix panels, huit types de visualisation, une
+**Objectif.** Le cas pratique du programme. Douze panels, huit types de visualisation, une
 variable, des seuils, des unités, des transformations, des rows.
 
 **Mise en situation.** L'équipe d'exploitation veut un écran par serveur : d'un coup d'œil, on
@@ -695,7 +699,7 @@ Dans l'éditeur de variable, *Refresh : On time range change* est le réglage ha
 ### Étape 1 — Row « Métier » (15 min)
 
 **Énoncé.** Cinq panels :
-1. **Chiffre d'affaires / heure** — Stat, `rate(shop_revenue_euros_total) * 3600` filtré par
+1. **Chiffre d'affaires / heure** — Stat, `rate(shop_revenue_euros_total[$__rate_interval]) * 3600` filtré par
    `$instance`, unité *Currency → Euro (€)*, 0 décimale, sparkline (*Graph mode : Area*), couleur
    fixe verte.
 2. **Commandes (dernière heure)** — Stat, `increase(...[1h])` sommé, *Instant*.

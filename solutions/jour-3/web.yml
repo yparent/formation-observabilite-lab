@@ -1,5 +1,5 @@
-# CORRIGÉ TP 9 (bonus) — authentification basique sur Prometheus
-# À déposer dans prometheus/web.yml, puis ajouter au service prometheus (docker-compose.yml) :
+# CORRIGÉ TP 9 partie 3 — authentification basique sur Prometheus
+# À déposer dans prometheus/web.yml, puis ajouter au service prometheus (compose/01-prometheus.yml) :
 #   - --web.config.file=/etc/prometheus/web.yml
 # et : docker compose up -d prometheus
 #

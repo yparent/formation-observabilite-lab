@@ -1,0 +1,28 @@
+# Brique 1 — Prometheus (exercice 1.7)
+services:
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.13.3
+    container_name: prometheus
+    restart: unless-stopped
+    ports: ["9090:9090"]
+    volumes:
+      - ../prometheus:/etc/prometheus          # prometheus.yml, rules/, tests/, targets/
+      - prometheus-data:/prometheus            # la TSDB, conservée entre deux redémarrages
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle                 # POST /-/reload
+      - --web.enable-admin-api                 # snapshots (TP 9)
+      - --web.external-url=http://localhost:9090
+      # TP 10 (Thanos) : décommenter les deux lignes suivantes, puis docker compose up -d prometheus
+      # - --storage.tsdb.min-block-duration=10m
+      # - --storage.tsdb.max-block-duration=10m
+    networks: [monitoring]
+
+volumes:
+  prometheus-data:
+
+networks:
+  monitoring:
+    name: formation-monitoring

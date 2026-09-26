@@ -10,14 +10,37 @@ instances et bombardée par un générateur de trafic. Elle est instrumentée po
 casser à la demande (latence, erreurs, CPU, fuite mémoire). Tout ce qu'on apprend s'applique
 immédiatement à quelque chose de concret qui tourne sous les yeux des stagiaires.
 
+Rien n'est installé au départ. Le premier matin, les stagiaires téléchargent les binaires de
+Prometheus puis de Grafana et les lancent à la main, pour voir ce qu'il y a dedans. Ensuite, la
+stack se monte brique par brique en Docker Compose : `docker-compose.yml` ne contient qu'une
+liste d'`include` commentés, un fichier par brique dans `compose/`, et c'est chaque exercice qui
+dit laquelle activer. La boutique elle-même est livrée avec des trous (`TODO 1` à `TODO 5` dans
+`app.py`) que les stagiaires comblent au TP 2. Le dernier après-midi, ils ajoutent un Thanos
+complet au-dessus de deux Prometheus.
+
+| Brique | Fichier | Activée |
+|---|---|---|
+| Prometheus | `compose/01-prometheus.yml` | J1, exercice 1.7 |
+| Grafana (provisioning inclus) | `compose/02-grafana.yml` | J1, exercice 1.7 |
+| Node Exporter | `compose/04-node-exporter.yml` | J1, TP 1 |
+| Boutique (2 instances + trafic) | `compose/03-shop-api.yml` | J1, TP 2 partie 1 |
+| Redis + exporter, Blackbox, Pushgateway | `compose/05-exporters.yml` | J1, TP 2 partie 3 |
+| Alertmanager + Inbox | `compose/06-alerting.yml` | J3, exercice 3.0 |
+| Thanos (Prometheus B, 2 sidecars, store, query, compact) | `compose/07-thanos.yml` | J3, TP 10 |
+| cAdvisor | `compose/08-cadvisor.yml` | optionnel |
+
+![L'ordre des briques sur les trois jours](../../diagrams/briques.png)
+
+![La stack complète, telle qu'elle est à la fin du jour 3](../../diagrams/lab-architecture.png)
+
 ## Ce que promet le programme, et où on le fait
 
 | Programme officiel | Où | Comment |
 |---|---|---|
 | Présentation, architecture, cas d'usage | J1 matin | Modules 1 et 2 |
-| Rappels d'installation, prise en main de l'environnement | J1 matin | Module 3 + exercices 1.1 à 1.4 |
-| Configuration (fichiers, service discovery) | J1 matin | Module 4 + exercices 1.5 à 1.8 |
-| Exporters, intégration de services tiers | J1 après-midi | Module 5 + TP 1 (Node Exporter) + TP 2 |
+| Rappels d'installation, prise en main de l'environnement | J1 matin | Module 3 (installation à la main) + exercices 1.1 à 1.4 |
+| Configuration (fichiers, service discovery) | J1 | Module 4 + exercices 1.5 à 1.8 (1.7 : passage aux conteneurs) |
+| Exporters, intégration de services tiers | J1 après-midi | Module 5 + TP 1 (Node Exporter) + Module 6 + TP 2 (instrumentation, Redis, Blackbox, Pushgateway) |
 | Cas pratique Node Exporter | J1 après-midi | TP 1 |
 | PromQL de base | J2 matin | Module 7 + série A |
 | PromQL avancé, recording rules, optimisation | J2 matin | Module 8 + série B + TP 3 |
@@ -32,15 +55,15 @@ immédiatement à quelque chose de concret qui tourne sous les yeux des stagiair
 | Alerting Grafana (unified alerting, contact points, policies) | J3 après-midi | Module 14 + TP 8 |
 | Performances, limites, bonnes pratiques | J3 après-midi | Module 15 |
 | Sauvegarde, restauration | J3 après-midi | TP 9 |
-| Mise à l'échelle | J3 fin | Module 16 |
+| Mise à l'échelle | J3 fin | Module 16 + TP 10 (Thanos) |
 
 ## Les règles que je me fixe
 
 1. **Jamais plus de 20 minutes sans que les stagiaires touchent au clavier.** Chaque module
    théorique est suivi d'exercices courts. Les gros TP arrivent quand les briques sont posées.
-2. **On construit, on ne détruit pas.** Le `prometheus.yml` du vendredi soir est celui du lundi
-   matin enrichi étape par étape. Idem pour Grafana et Alertmanager. À la fin, chacun repart avec
-   une stack complète qu'il a assemblée lui-même.
+2. **On construit, on ne détruit pas.** Le `prometheus.yml` du dernier jour est celui du premier
+   matin (un seul job) enrichi étape par étape. Idem pour Grafana, Alertmanager et l'application.
+   À la fin, chacun repart avec une stack complète qu'il a assemblée lui-même, brique par brique.
 3. **Le corrigé n'est jamais donné avant d'avoir cherché.** Les stagiaires ont le guide avec les
    énoncés et quelques indices. Je projette le corrigé après un temps de recherche, jamais avant.
 
@@ -52,9 +75,10 @@ cibles ; les TP 4, 5 et 6 sont ceux qui débordent le plus souvent, les bonus so
 rapides.
 
 Si le groupe est en retard, ce qui peut sauter sans casser la suite :
-- J1 : exercice 1.8 (relabeling), TP 2 partie 5 (bonus cardinalité)
+- J1 : exercice 1.8 (relabeling), TP 2 partie 6 (bonus cardinalité)
 - J2 : série B exercices 2.19 à 2.22, TP 5 partie 4 (heatmap), exercice 2.33 (service account)
-- J3 : TP 6 parties 8 et 9 (silences, mute), TP 9 partie 4 (basic auth)
+- J3 : TP 6 partie 5 (silences, plages horaires), TP 9 partie 3 (basic auth), TP 10 partie 4 si
+  les blocs ne sont pas encore arrivés (je montre le mien)
 
 ## Matériel
 
@@ -62,32 +86,48 @@ Si le groupe est en retard, ce qui peut sauter sans casser la suite :
 - Les trois guides stagiaires, un par jour, dossier `docs/stagiaire/` (PDF ou Markdown pour Notion).
   Je ne distribue le guide du jour que le matin même.
 - Le dépôt GitHub, branche `formation-2026` : https://github.com/yparent/formation-observabilite-lab
+  (dont `install/` pour les binaires du premier matin, `compose/` pour les briques)
 - Les corrigés (`solutions/`), ce guide et le deck sont sur la branche `formation-2026-formateur`,
   que je ne distribue pas. La branche `formation-2026` des stagiaires n'en contient aucun.
 
 ## L'environnement technique
 
-Tout tourne en conteneurs. Plusieurs modes possibles pour les stagiaires, à valider **avant** la
-formation avec le client :
+Le premier matin tourne sur des binaires (téléchargés par `install/download.sh` ou
+`install/download.ps1`, environ 200 Mo), tout le reste en conteneurs. Plusieurs modes possibles pour
+les stagiaires, à valider **avant** la formation avec le client :
 
 | Mode | Avantages | Points d'attention |
 |---|---|---|
-| GitHub Codespaces | Rien à installer, identique pour tous | Compte GitHub obligatoire, quota gratuit 120 h-cœur/mois (largement suffisant pour 3 jours en machine 2 cœurs, un peu juste en 4 cœurs), les URLs passent par un proxy |
+| GitHub Codespaces | Rien à installer, identique pour tous ; **tout le programme** (binaires du matin, les huit briques, Thanos, TP 9 compris) y a été déroulé | Compte GitHub obligatoire, quota gratuit 120 h-cœur/mois : 60 h en 2 cœurs (le minimum proposé par le `devcontainer.json`), 30 h en 4 cœurs, pour 3 × 7 h de formation ; les URLs passent par un proxy. 2 cœurs / 8 Go suffisent pour tout, 4 cœurs rendent le TP 10 (18 conteneurs) plus confortable |
 | Docker Desktop macOS/Linux | Rapide, tout en local | Docker doit être installé et fonctionnel la veille |
 | Docker Desktop Windows | Idem | Backend WSL 2 obligatoire, PowerShell pour `lab.ps1`, fins de ligne gérées par `.gitattributes` |
 
 Mon conseil : envoyer un mail une semaine avant avec le lien du dépôt et demander à chacun de
-lancer `./lab.sh up` (ou de créer son Codespace) et de m'envoyer une capture de Grafana. Ça évite
-de perdre la première heure.
+lancer `docker compose version` (ou de créer son Codespace) et de m'envoyer une capture. Ça évite
+de perdre la première heure. Je ne leur demande pas de lancer la stack : c'est le travail du jour 1.
 
 ### Ce qui doit tourner à 9h00 le jour 1
 
-- Ma propre stack lancée et chaude depuis au moins 30 minutes (les graphiques ont besoin d'historique).
+- Mon propre dépôt avec les binaires téléchargés (pour montrer), et une seconde copie du dépôt
+  avec toutes les briques du jour 1 activées et chaudes depuis 30 minutes (pour les démonstrations
+  qui ont besoin d'historique, à partir du module 5). Les deux ne tournent pas en même temps :
+  mêmes ports.
 - Le deck projeté, la fenêtre du navigateur avec un onglet par service.
 - Un terminal avec le dépôt ouvert.
 - Si Teams est utilisé pour le TP 7 : le flux Workflows créé dans un canal de test, l'URL sous la main.
 
 ### Codespaces : les pièges connus
+
+- Si les stagiaires ne peuvent rien installer sur leur poste (poste verrouillé, pas de Docker),
+  Codespaces suffit pour l'intégralité de la formation : les binaires de l'exercice 1.1 sont
+  ceux de Linux amd64, les huit briques tournent en Docker-in-Docker, et rien ne dépend d'un
+  outil local. Seul besoin : un navigateur, un compte GitHub, et un réseau qui laisse passer
+  github.com et *.app.github.dev.
+- Docker Hub limite les pulls anonymes à 10 par heure et par IP : les images de la famille
+  Prometheus viennent de quay.io pour cette raison, mais Grafana, Redis, curl et `python`
+  restent sur Docker Hub. Si plusieurs Codespaces sortent par la même IP et que `./lab.sh up`
+  échoue sur `toomanyrequests`, un `docker login` avec un compte Docker Hub gratuit règle le
+  problème ; je le prévois dans le mail de préparation.
 
 - Les ports sont redirigés vers des URLs `https://<nom>-<port>.app.github.dev`. Dans Grafana, les
   liens « localhost » du dashboard d'accueil ne fonctionnent donc pas : il faut passer par l'onglet
@@ -96,7 +136,8 @@ de perdre la première heure.
 - Un Codespace s'arrête tout seul après 30 minutes d'inactivité. Les données Docker (volumes) sont
   conservées tant que le Codespace n'est pas supprimé : le lendemain, `./lab.sh up` repart avec
   l'historique.
-- `postStartCommand` relance la stack à chaque démarrage du Codespace.
+- Rien ne se lance au démarrage du Codespace : les stagiaires font `./lab.sh up` chaque matin,
+  les briques activées la veille sont toujours décommentées.
 
 ### Docker Desktop : les pièges connus
 
@@ -104,7 +145,9 @@ de perdre la première heure.
   chiffres (CPU, RAM, disques) sont ceux de la VM. Je le dis pendant le TP 1, c'est un bon
   prétexte pour expliquer comment Docker Desktop fonctionne.
 - Sur Windows, si `lab.ps1` est bloqué : `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-- Ports 3000, 5001, 5002, 8080, 9090, 9091, 9093, 9100, 9115, 9121 doivent être libres.
+- Ports 3000, 5001, 5002, 8080, 9090, 9091, 9092, 9093, 9100, 9115, 9121, 10902 doivent être libres.
+- Le piège du jour 1 : un binaire du matin qui tourne encore quand on lance les conteneurs
+  (`port is already allocated`). `Ctrl+C` dans le terminal du binaire.
 - Sur Mac, `./lab.sh chaos cpu` fait chauffer la VM, pas la machine. C'est suffisant pour l'alerte.
 
 ## Comment lire ce guide

@@ -9,10 +9,11 @@ global:
 rule_files:
   - rules/*.yml
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ["alertmanager:9093"]
+# Activé à l'exercice 3.0 (jour 3)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
 
 scrape_configs:
 
@@ -31,22 +32,18 @@ scrape_configs:
     static_configs:
       - targets: ["node-exporter:9100"]
 
-  # Exercice 1.7 : découverte par fichier
-  - job_name: file-sd
-    file_sd_configs:
-      - files: ["targets/*.yml", "targets/*.json"]
-        refresh_interval: 30s
-
   # TP 2 — exporter tiers
   - job_name: redis
     static_configs:
       - targets: ["redis-exporter:9121"]
 
-  # TP 2 — Pushgateway : honor_labels garde le job/instance poussés par le batch
+  # TP 2 partie 5 — Pushgateway par découverte de fichier (targets/pushgateway.yml).
+  # honor_labels garde le job/instance poussés par le batch.
   - job_name: pushgateway
     honor_labels: true
-    static_configs:
-      - targets: ["pushgateway:9091"]
+    file_sd_configs:
+      - files: ["targets/*.yml"]
+        refresh_interval: 30s
 
   # TP 2 — sondes Blackbox : la cible réelle passe en paramètre "target",
   # et l'adresse scrapée est réécrite vers l'exporter.

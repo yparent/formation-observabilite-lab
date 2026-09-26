@@ -1,9 +1,11 @@
 # ---------------------------------------------------------------------------
-# Configuration Prometheus du lab
+# Configuration Prometheus du lab (version conteneur, à partir de l'exercice 1.7)
 #
 # Après chaque modification :
 #   1. valider   : docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
 #   2. recharger : curl -X POST http://localhost:9090/-/reload
+#
+# Ce fichier grossit au fil des TP. Au départ, Prometheus ne surveille que lui-même.
 # ---------------------------------------------------------------------------
 
 global:
@@ -16,10 +18,11 @@ global:
 rule_files:
   - rules/*.yml
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ["alertmanager:9093"]
+# Décommenté à l'exercice 3.0 (jour 3), quand la brique 06-alerting est active
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
 
 scrape_configs:
 
@@ -28,18 +31,9 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # L'application fil rouge (deux instances)
-  - job_name: shop-api
-    static_configs:
-      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
-        labels:
-          env: formation
-          team: boutique
-
-  # --- Jour 1 / TP 1 : ajouter ici le job "node" (node-exporter:9100) --------
-
-  # --- Jour 1 / TP 2 : à compléter par les stagiaires -----------------------
-  # - job "redis"        -> redis-exporter:9121
-  # - job "pushgateway"  -> pushgateway:9091   (honor_labels: true)
-  # - job "blackbox-http" (module http_2xx, relabeling vers blackbox-exporter:9115)
+  # --- Jour 1 / TP 1 : job "node"          -> node-exporter:9100 ----------------
+  # --- Jour 1 / TP 2 : job "shop-api"      -> shop-api-1:5000, shop-api-2:5000
+  #                     job "redis"         -> redis-exporter:9121
+  #                     job "blackbox-http" -> module http_2xx, relabeling vers blackbox-exporter:9115
+  #                     job "pushgateway"   -> file_sd_configs sur targets/*.yml, honor_labels: true
   # ---------------------------------------------------------------------------

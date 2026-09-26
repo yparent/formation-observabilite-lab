@@ -8,8 +8,8 @@ Formateur : Yohan Parent · Dépôt : https://github.com/yparent/formation-obser
 
 | Heure | Séquence |
 |---|---|
-| 9h00 | Rappel du jour 2 |
-| 9h10 | Philosophie de l'alerting, règles Prometheus |
+| 9h00 | Rappel du jour 2 — exercice 3.0 : brancher l'Alertmanager |
+| 9h15 | Philosophie de l'alerting, règles Prometheus |
 | 9h40 | Alertmanager |
 | 10h05 | TP 6 — Alertes Prometheus et routage Alertmanager |
 | 11h15 | Notifications tierces : Slack, PagerDuty, Teams (Workflows), GitHub, templates |
@@ -17,9 +17,27 @@ Formateur : Yohan Parent · Dépôt : https://github.com/yparent/formation-obser
 | 14h00 | Alerting Grafana |
 | 14h25 | TP 8 — Alerting Grafana, de l'interface au code |
 | 15h10 | Performances, limites, bonnes pratiques — exercices 3.1 à 3.5 |
-| 16h00 | TP 9 — Sauvegarde, restauration, longue durée, sécurité |
-| 16h45 | Mise à l'échelle et écosystème |
-| 17h05 | War game, évaluation |
+| 15h35 | TP 9 — Sauvegarde, restauration, sécurité |
+| 16h15 | Mise à l'échelle et écosystème |
+| 16h25 | TP 10 — Thanos : historique long et vue globale |
+| 17h15 | War game, évaluation |
+
+---
+
+## Exercice 3.0 — Brancher l'Alertmanager
+
+Depuis le jour 1, Prometheus évalue une règle d'alerte (`TargetDown`, dans `prometheus/rules/alerts.yml`)
+mais n'a personne à qui l'envoyer.
+
+1. Dans `docker-compose.yml`, décommentez `compose/06-alerting.yml`. Lisez-le : deux services.
+   `./lab.sh up`, `./lab.sh status`. Ouvrez http://localhost:9093 et http://localhost:8080.
+2. Dans `prometheus/prometheus.yml`, décommentez le bloc `alerting` (cible `alertmanager:9093`).
+   Validez, rechargez.
+3. Vérifiez dans Prometheus, **Status → Alertmanager discovery** : une cible active.
+4. Ouvrez `alertmanager/alertmanager.yml` : un seul receiver, vers l'Inbox. C'est lui qu'on
+   enrichit au TP 6.
+
+> Que vaut `prometheus_notifications_sent_total` avant / après ?
 
 ---
 
@@ -50,6 +68,8 @@ groups:
 Une alerte se déclenche **par série renvoyée**. Cycle : inactive → pending (`for`) → firing.
 Templates : `{{ $labels.x }}`, `{{ $value }}`, `humanize`, `humanizePercentage`,
 `humanizeDuration`, `printf "%.0f"`.
+
+![Le cycle de vie d'une alerte](../diagrams/cycle-alerte.png)
 
 **Alertmanager.** `route` (arbre : `matchers`, `receiver`, `continue`), `group_by` /
 `group_wait` (30 s) / `group_interval` (5 m) / `repeat_interval` (4 h), `receivers`
@@ -341,10 +361,11 @@ curl -s 'http://localhost:9090/api/v1/query?stats=all' \
 
 ---
 
-## TP 9 — Sauvegarde, restauration, longue durée, sécurité
+## TP 9 — Sauvegarde, restauration, sécurité
 
 **Situation.** Un audit demande : « si le serveur de monitoring brûle, en combien de temps le
-remettez-vous ? Avez-vous 13 mois d'historique ? Qui peut lire vos métriques ? »
+remettez-vous ? Qui peut lire vos métriques ? » (La question « avez-vous 13 mois d'historique ? »,
+c'est le TP 10.)
 
 ### Partie 1 — Snapshot et restauration de Prometheus
 
@@ -376,19 +397,7 @@ docker compose start prometheus
 
 > 
 
-### Partie 3 — Remote write vers un Prometheus longue durée
-
-1. `./lab.sh longterm` (second Prometheus sur le port 9095, 90 jours de rétention).
-2. Ajoutez à `prometheus.yml` un bloc `remote_write` vers `http://prometheus-longterm:9090/api/v1/write`
-   qui n'envoie **que** les métriques métier (`shop_*`), les recording rules (`job:*`, `instance:*`,
-   `route:*`) et `up` (`write_relabel_configs` avec `action: keep`). Validez, rechargez.
-3. Après une minute, sur http://localhost:9095 : quelles métriques ? Combien de séries ?
-4. Surveillez : `prometheus_remote_storage_samples_total`, `prometheus_remote_storage_samples_failed_total`,
-   et le retard `prometheus_remote_storage_highest_timestamp_in_seconds - prometheus_remote_storage_queue_highest_sent_timestamp_seconds`.
-
-> 
-
-### Partie 4 — Un mot de passe sur Prometheus (bonus)
+### Partie 3 — Un mot de passe sur Prometheus
 
 1. Créez `prometheus/web.yml` :
 
@@ -397,9 +406,10 @@ basic_auth_users:
   admin: $2b$10$3wlDJ8unzqCKCH.k2lW4Mu3KNMCxsdufq6qqSkz/O7CRGj5tTT.m6   # "formation"
 ```
 
-2. Ajoutez `--web.config.file=/etc/prometheus/web.yml` au service `prometheus`,
-   `docker compose up -d prometheus`. http://localhost:9090 demande un mot de passe.
-3. Qu'est-ce qui casse ? Réparez-le (Grafana, `./lab.sh reload`...). Puis retirez l'option avant le war game.
+2. Ajoutez `--web.config.file=/etc/prometheus/web.yml` au service `prometheus` de
+   `compose/01-prometheus.yml`, `docker compose up -d prometheus`. http://localhost:9090 demande un mot de passe.
+3. Qu'est-ce qui casse ? Réparez-le (Grafana, `./lab.sh reload`...). Puis **retirez** l'option :
+   le TP 10 et le war game se font sans mot de passe.
 
 > 
 
@@ -407,10 +417,109 @@ basic_auth_users:
 
 ## Rappels — mise à l'échelle
 
-Sharding fonctionnel → fédération → remote write vers Mimir / Thanos / VictoriaMetrics → managé
+Sharding fonctionnel → fédération → stockage longue durée (Thanos, Mimir, VictoriaMetrics) → managé
 (Grafana Cloud, AMP, GMP, Azure). Mode agent et Grafana Alloy pour l'edge. OpenTelemetry pour
 instrumenter, Prometheus 3 reçoit l'OTLP nativement. Loki (logs) et Tempo (traces) pour la suite.
 Kubernetes : kube-prometheus-stack.
+
+**Thanos, qui fait quoi.**
+
+| Composant | Rôle |
+|---|---|
+| Sidecar | à côté de chaque Prometheus : sert sa TSDB au Querier, envoie les blocs terminés au stockage objet |
+| Store Gateway | sert les blocs du stockage objet |
+| Querier | une API Prometheus globale : interroge tous les stores, fusionne, déduplique les réplicas |
+| Compactor | fusionne les blocs, applique la rétention, calcule les résolutions 5 min et 1 h |
+
+Les `external_labels` de chaque Prometheus identifient l'origine des blocs ; le label `replica`
+est celui que le Querier ignore pour dédupliquer.
+
+![L'architecture Thanos du lab](../diagrams/thanos.png)
+
+## TP 10 — Thanos : historique long et vue globale
+
+**Situation.** La boutique ouvre un second site. Chaque site a son Prometheus (rétention 15 jours).
+L'audit veut 13 mois d'historique et une vue globale, sans toucher aux Prometheus existants.
+
+Tout tient dans une brique, `compose/07-thanos.yml`, et tout tourne dans votre Codespace ou sur
+votre machine (six conteneurs de plus). Le « stockage objet » du lab est un dossier partagé
+(`thanos/objstore.yml`) ; en production, le même fichier pointerait sur S3, GCS ou Azure.
+
+### Partie 1 — Lire l'architecture et lancer
+
+1. Ouvrez `compose/07-thanos.yml` et repérez, pour chaque service, son rôle et à qui il parle :
+   `thanos-sidecar-a`, `prometheus-b`, `thanos-sidecar-b`, `thanos-store`, `thanos-query`,
+   `thanos-compact`. Quel volume est partagé par qui ?
+2. Ouvrez `thanos/prometheus-b.yml` : qu'est-ce qui diffère du Prometheus principal ? Pourquoi les
+   deux ont-ils un `external_labels.replica` différent ?
+3. Dans `compose/01-prometheus.yml`, décommentez les deux flags `--storage.tsdb.*-block-duration=10m`
+   (des blocs de 10 minutes au lieu de 2 heures, pour voir les envois pendant le TP). **Ne sautez pas
+   cette étape** : un sidecar exige que ces deux valeurs soient égales.
+4. Dans `docker-compose.yml`, décommentez `compose/07-thanos.yml`. `./lab.sh up`, `./lab.sh status` :
+   six conteneurs de plus, tous `Up`. Notez l'heure : ______
+
+> Qui partage quoi, et pourquoi deux `replica` :
+>
+>
+
+### Partie 2 — Le Querier : une vue, deux Prometheus
+
+1. http://localhost:10902 : l'interface de Prometheus, à un détail près. **Stores** : que voyez-vous ?
+   Quels labels chaque *store* annonce-t-il ?
+2. Requête `up{job="shop-api"}`. Combien de séries ? Décochez **Use Deduplication** (en haut de la
+   page). Combien maintenant ? Expliquez.
+3. `count by (replica) (up)` sans déduplication, puis avec. Où est passé le label `replica` ?
+4. Arrêtez `prometheus-b` (`docker compose stop prometheus-b`) : `up{job="shop-api"}` avec
+   déduplication. Redémarrez-le (`docker compose start prometheus-b`).
+5. Combien de noms de métriques différents sur le Querier, sur Prometheus (9090), sur Prometheus B (9092) ?
+   `count(count by (__name__) ({__name__=~".+"}))`.
+
+> Vos observations :
+>
+>
+>
+
+*Astuce : cherchez `--query.replica-label` dans le compose.*
+
+### Partie 3 — Grafana sur Thanos
+
+1. Ajoutez une source de données dans Grafana : type *Prometheus*, nom `Thanos`, URL
+   `http://thanos-query:10902`. Dans *Performance*, *Prometheus type* : **Thanos**. *Save & test*.
+   (Ou en fichier : `grafana/provisioning/datasources/thanos.yml`, puis `docker compose restart grafana`.)
+2. Ouvrez le dashboard TP 5 et changez sa source de données pour `Thanos` (réglages du dashboard,
+   ou une variable `datasource` de type *Data source*). Tout s'affiche-t-il ?
+3. Explore, source Thanos : `shop_orders_total`. Le label `replica` a disparu, `cluster` est resté.
+   Pourquoi garde-t-on `cluster` ?
+
+> 
+
+### Partie 4 — Le bucket, le Store Gateway et le Compactor
+
+À faire au moins quinze minutes après le lancement de la partie 1.
+
+1. `docker compose exec thanos-store ls -la /bucket` : des dossiers au nom bizarre (des ULID).
+   Ouvrez le `meta.json` de l'un d'eux (`docker compose exec thanos-store cat /bucket/<ULID>/meta.json`) :
+   de qui vient ce bloc ? quelle période couvre-t-il ?
+   Côté sidecar : `docker compose exec thanos-sidecar-a wget -qO- localhost:10902/metrics | grep thanos_shipper_uploads`.
+2. Sur le Querier, **Stores** : le Store Gateway annonce maintenant une fenêtre de temps et des
+   labels. Lesquels ?
+3. Les logs du compactor : `docker compose logs thanos-compact | tail -20`. Que fait-il ? Quelle
+   rétention a-t-on configurée pour chaque résolution ?
+4. Que se passe-t-il quand `prometheus` supprime un bloc localement au bout de 15 jours ? D'où
+   vient la donnée d'il y a 6 mois quand Grafana la demande ? Et celle d'il y a 2 minutes ?
+
+> 
+>
+>
+
+*Astuce : si `/bucket` est vide, regardez `docker compose logs thanos-sidecar-a` (les flags de la
+partie 1, étape 3, ont-ils été décommentés ?) et l'heure notée.*
+
+### Partie 5 — Ranger
+
+Le war game se fait sur la stack de ce matin. Recommentez `compose/07-thanos.yml` et les deux
+flags de `compose/01-prometheus.yml`, puis `./lab.sh up` (les conteneurs en trop sont retirés).
+Vérifiez avec `./lab.sh status`. Gardez les volumes : `./lab.sh reset` seulement à la fin de la formation.
 
 ## War game
 

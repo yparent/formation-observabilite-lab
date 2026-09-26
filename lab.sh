@@ -15,7 +15,6 @@
 #   ./lab.sh chaos reset               remet tout en ordre
 #   ./lab.sh traffic <rps>             change le débit du générateur de trafic
 #   ./lab.sh batch                     lance le batch qui pousse dans la Pushgateway
-#   ./lab.sh longterm                  démarre le Prometheus "longue durée" (Jour 3)
 #   ./lab.sh snapshot                  crée un snapshot TSDB (Jour 3)
 # ---------------------------------------------------------------------------
 set -e
@@ -44,22 +43,34 @@ urls() {
   Blackbox       $(url 9115)
   Pushgateway    $(url 9091)
   Redis exporter $(url 9121)   /metrics
+  Thanos Query   $(url 10902)  (TP 10)
+  Prometheus B   $(url 9092)   (TP 10)
 EOF
 }
 
 case "${1:-help}" in
   up)
-    docker compose up -d --build
+    if [ -z "$(docker compose config --services 2>/dev/null)" ]; then
+      echo "Aucune brique activée : décommentez des lignes 'include' dans docker-compose.yml (exercice 1.7)."; exit 1
+    fi
+    docker compose up -d --build --remove-orphans
     echo; echo "Stack démarrée. Comptez ~30 s pour que Grafana soit prêt."; urls ;;
   down)   docker compose --profile "*" down ;;
-  reset)  docker compose --profile "*" down -v ;;
+  reset)
+    docker compose --profile "*" down -v
+    # les volumes des briques recommentées (Thanos) ne sont plus dans la config : on les retire aussi
+    for v in $(docker volume ls -q | grep -E 'prometheus-b-data|thanos-bucket|prometheus-data|grafana-data|alertmanager-data'); do docker volume rm -f "$v" >/dev/null; done ;;
   status) docker compose ps; urls ;;
   reload)
     curl -fsS -X POST http://localhost:9090/-/reload && echo "Prometheus rechargé"
-    curl -fsS -X POST http://localhost:9093/-/reload && echo "Alertmanager rechargé" ;;
+    if docker compose ps --services --status running 2>/dev/null | grep -qx alertmanager; then
+      curl -fsS -X POST http://localhost:9093/-/reload && echo "Alertmanager rechargé"
+    fi ;;
   check)
     docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
-    docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml ;;
+    if docker compose ps --services --status running 2>/dev/null | grep -qx alertmanager; then
+      docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
+    fi ;;
   test)
     docker compose exec prometheus sh -c 'cd /etc/prometheus/tests && promtool test rules *.yml' ;;
   logs)   shift; docker compose logs -f "$@" ;;
@@ -77,10 +88,9 @@ case "${1:-help}" in
     TRAFFIC_RPS=${2:-6} docker compose up -d traffic
     echo "Trafic réglé à ${2:-6} req/s" ;;
   batch)    docker compose --profile batch run --rm batch-job ;;
-  longterm) docker compose --profile longterm up -d prometheus-longterm; echo "Prometheus longue durée : $(url 9095)" ;;
   snapshot)
     curl -fsS -X POST http://localhost:9090/api/v1/admin/tsdb/snapshot; echo
     echo "Snapshots dans le volume prometheus-data (/prometheus/snapshots)" ;;
   *)
-    sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' ;;
+    sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

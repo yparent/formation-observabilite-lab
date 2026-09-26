@@ -1,0 +1,47 @@
+# Brique 3 — l'application fil rouge : deux instances, le générateur de trafic, Redis (TP 2)
+x-shop-api: &shop-api
+  build: ../apps/shop-api
+  image: formation/shop-api:local
+  restart: unless-stopped
+  networks: [monitoring]
+  depends_on: [redis]
+
+services:
+  shop-api-1:
+    <<: *shop-api
+    container_name: shop-api-1
+    environment:
+      INSTANCE_NAME: shop-api-1
+      REDIS_URL: redis://redis:6379/0
+      PROMETHEUS_DISABLE_CREATED_SERIES: "true"   # évite les séries *_created inutiles
+    ports: ["5001:5000"]
+
+  shop-api-2:
+    <<: *shop-api
+    container_name: shop-api-2
+    environment:
+      INSTANCE_NAME: shop-api-2
+      REDIS_URL: redis://redis:6379/0
+      PROMETHEUS_DISABLE_CREATED_SERIES: "true"
+    ports: ["5002:5000"]
+
+  # Des clients simulés, sinon les courbes restent plates
+  traffic:
+    build: ../apps/traffic
+    image: formation/traffic:local
+    container_name: traffic
+    restart: unless-stopped
+    environment:
+      TRAFFIC_RPS: "${TRAFFIC_RPS:-6}"
+    networks: [monitoring]
+    depends_on: [shop-api-1, shop-api-2]
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    name: formation-monitoring

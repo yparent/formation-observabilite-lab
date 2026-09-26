@@ -1,0 +1,26 @@
+# Brique 2 — Grafana, source de données et dashboard d'accueil provisionnés (exercice 1.7)
+services:
+  grafana:
+    image: grafana/grafana:13.2.1
+    container_name: grafana
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: formation
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning   # datasources, dashboards, alerting
+      - ../grafana/dashboards:/var/lib/grafana/dashboards   # les JSON "as code"
+      - grafana-data:/var/lib/grafana                       # grafana.db
+    networks: [monitoring]
+
+volumes:
+  grafana-data:
+
+networks:
+  monitoring:
+    name: formation-monitoring

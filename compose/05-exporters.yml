@@ -1,0 +1,42 @@
+# Brique 5 — services tiers : Redis exporter, Blackbox, Pushgateway et le batch (TP 2)
+services:
+  redis-exporter:
+    image: quay.io/oliver006/redis_exporter:v1.92.0
+    container_name: redis-exporter
+    restart: unless-stopped
+    ports: ["9121:9121"]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    networks: [monitoring]
+
+  blackbox-exporter:
+    image: quay.io/prometheus/blackbox-exporter:v0.28.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    ports: ["9115:9115"]
+    volumes:
+      - ../blackbox:/etc/blackbox_exporter
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+    networks: [monitoring]
+
+  pushgateway:
+    image: quay.io/prometheus/pushgateway:v1.11.3
+    container_name: pushgateway
+    restart: unless-stopped
+    ports: ["9091:9091"]
+    networks: [monitoring]
+
+  # Un batch qui ne vit que quelques secondes : docker compose --profile batch run --rm batch-job
+  batch-job:
+    image: curlimages/curl:8.16.0
+    container_name: batch-job
+    profiles: [batch]
+    volumes:
+      - ../scripts/batch-job.sh:/batch-job.sh:ro
+    entrypoint: ["sh", "/batch-job.sh"]
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    name: formation-monitoring

@@ -39,7 +39,7 @@ route:
       receiver: astreinte-teams
       group_wait: 10s
 
-    # 5) Le reste de l'infra hors heures ouvrées est mis en sourdine (bonus TP 6)
+    # 5) Le reste de l'infra hors heures ouvrées est mis en sourdine (TP 6, partie 5)
     - matchers:
         - team = infra
       receiver: infra-inbox

@@ -6,7 +6,7 @@
     "ghcr.io/devcontainers/features/python:1": { "version": "3.13" }
   },
   "hostRequirements": {
-    "cpus": 4,
+    "cpus": 2,
     "memory": "8gb"
   },
   "customizations": {
@@ -20,7 +20,7 @@
       }
     }
   },
-  "forwardPorts": [9090, 3000, 9093, 8080, 5001, 5002, 9100, 9115, 9091, 9121, 9095],
+  "forwardPorts": [9090, 3000, 9093, 8080, 5001, 5002, 9100, 9115, 9091, 9121, 10902, 9092],
   "portsAttributes": {
     "9090": { "label": "Prometheus" },
     "3000": { "label": "Grafana" },
@@ -32,8 +32,8 @@
     "9115": { "label": "Blackbox Exporter" },
     "9091": { "label": "Pushgateway" },
     "9121": { "label": "Redis Exporter" },
-    "9095": { "label": "Prometheus longue durée" }
+    "10902": { "label": "Thanos Query" },
+    "9092": { "label": "Prometheus B (Thanos)" }
   },
-  "postCreateCommand": "chmod +x lab.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask",
-  "postStartCommand": "./lab.sh up"
+  "postCreateCommand": "chmod +x lab.sh install/download.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask"
 }
