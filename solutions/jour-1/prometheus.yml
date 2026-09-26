@@ -68,11 +68,13 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
-  # Exercice 1.8 (bonus) : relabeling — on retire les métriques Go du redis-exporter
-  - job_name: redis-light
-    static_configs:
-      - targets: ["redis-exporter:9121"]
-    metric_relabel_configs:
-      - source_labels: [__name__]
-        regex: "go_.*|process_.*|promhttp_.*"
-        action: drop
+  # Exercice 1.8 (bonus) : relabeling — on retire les métriques internes du Node Exporter.
+  # À retirer après la comparaison : deux jobs sur la même cible dupliquent toutes les séries
+  # (et les dashboards du jour 2 afficheraient tout en double).
+  # - job_name: node-light
+  #   static_configs:
+  #     - targets: ["node-exporter:9100"]
+  #   metric_relabel_configs:
+  #     - source_labels: [__name__]
+  #       regex: "go_.*|process_.*|promhttp_.*"
+  #       action: drop

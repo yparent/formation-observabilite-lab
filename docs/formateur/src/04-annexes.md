@@ -52,8 +52,9 @@ docker compose exec prometheus promtool check rules /etc/prometheus/rules/*.yml
 docker compose exec prometheus sh -c 'cd /etc/prometheus/tests && promtool test rules *.yml'
 docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
 docker compose exec alertmanager amtool config routes show --config.file=/etc/alertmanager/alertmanager.yml
-docker compose exec alertmanager amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml severity=critical
-docker compose exec alertmanager amtool alert
+docker compose exec alertmanager amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml \
+    severity=critical
+docker compose exec alertmanager amtool alert          # l'URL vient de /etc/amtool/config.yml
 docker compose exec alertmanager amtool silence add alertname=X -d 1h -c "commentaire"
 curl -X POST localhost:9090/-/reload      curl -X POST localhost:9093/-/reload
 curl -X POST localhost:9090/api/v1/admin/tsdb/snapshot
@@ -92,7 +93,7 @@ curl -X POST localhost:9090/api/v1/admin/tsdb/snapshot
 ### Ports
 
 Prometheus 9090 · Alertmanager 9093 · Grafana 3000 · Pushgateway 9091 · Node Exporter 9100 ·
-Blackbox 9115 · Redis exporter 9121 · cAdvisor 8080 · Inbox 8080 (lab) · shop-api 5001/5002 (lab)
+Blackbox 9115 · Redis exporter 9121 · cAdvisor 8080 (8085 dans le lab) · Inbox 8080 (lab) · shop-api 5001/5002 (lab)
 
 ## Annexe C — Ressources
 

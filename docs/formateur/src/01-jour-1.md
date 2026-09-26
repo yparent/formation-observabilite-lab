@@ -34,7 +34,7 @@ aujourd'hui et avec quoi (Zabbix, Centreon, Datadog, rien...), et **une panne do
 souviennent**. Je réutiliserai ces pannes toute la semaine comme exemples. Ça met tout le monde
 dans le bain et ça me dit tout de suite qui a déjà touché à Prometheus.
 
-Les trois questions de positionnement (Qualiopi, mais surtout utiles) :
+Les questions de positionnement (Qualiopi, mais surtout utiles) :
 1. Quelle est la différence entre pull et push ?
 2. Qu'est-ce qu'une série temporelle ?
 3. Sauriez-vous dire si un bug est côté infra ou côté applicatif ?
@@ -108,8 +108,8 @@ Le push garde un cas d'usage : les jobs éphémères (un batch de 3 secondes ne 
 scrapé). On verra la Pushgateway au TP 2.
 
 **Un peu d'histoire, vite.** Né chez SoundCloud en 2012, inspiré de Borgmon (Google). Open
-source en 2015. Deuxième projet accueilli par la CNCF en 2016 après Kubernetes, gradué en
-2018. Aujourd'hui, c'est le standard de fait : Kubernetes, Docker, la plupart des bases de
+source en 2015. Deuxième projet accueilli par la CNCF en 2016 après Kubernetes, gradué
+en 2018. Aujourd'hui, c'est le standard de fait : Kubernetes, Docker, la plupart des bases de
 données et des middlewares exposent nativement du format Prometheus. Version 3 sortie fin 2024 ;
 on travaille sur la 3.15 (septembre 2026).
 
@@ -141,10 +141,10 @@ n'envoie pas. On le voit cet après-midi.
 
 1. Les **cibles** (targets) : tout ce qui expose une page `/metrics` en HTTP. Une application
    instrumentée, un exporter.
-2. Le **serveur Prometheus** : un seul binaire Go qui fait trois choses.
-   - *Scraper* : toutes les 15 secondes (par défaut), il appelle chaque `/metrics`.
-   - *Stocker* : dans sa base de séries temporelles locale, la TSDB.
-   - *Évaluer* : des règles PromQL, pour pré-calculer (recording rules) ou pour alerter.
+2. Le **serveur Prometheus** : un seul binaire Go qui scrape, stocke et évalue.
+    - *Scraper* : toutes les 15 secondes (par défaut), il appelle chaque `/metrics`.
+    - *Stocker* : dans sa base de séries temporelles locale, la TSDB.
+    - *Évaluer* : des règles PromQL, pour pré-calculer (recording rules) ou pour alerter.
 3. **Alertmanager** : un binaire séparé qui reçoit les alertes de Prometheus, les regroupe,
    les déduplique, les route vers Slack, Teams, PagerDuty, mail.
 4. **Grafana** : interroge Prometheus en PromQL et dessine.
@@ -186,8 +186,8 @@ Histogram contre Summary : l'histogramme est calculé côté serveur, on peut ad
 buckets de dix instances et calculer un p95 global. Le Summary calcule ses quantiles dans
 l'application ; on ne peut pas faire la moyenne de deux p95. En 2026, on choisit l'histogramme
 sauf cas très particulier. Je mentionne les *native histograms* (buckets exponentiels
-automatiques, bien plus précis pour moins de séries), encore marqués expérimentaux dans
-Prometheus 3.15 mais déjà utilisés en production par certains ; on les voit au jour 2.
+automatiques, bien plus précis pour moins de séries), stables depuis Prometheus 3.9 et
+activés par `scrape_native_histograms: true` ; on les voit au jour 2.
 
 **Le format d'exposition.** Du texte, lisible par un humain :
 
@@ -319,7 +319,7 @@ le script bloqué par la politique d'exécution.
    `shop_payment_duration_seconds` (`_count`, `_sum`, pas de quantiles en Python).
 2. 11 buckets explicites, de `le="0.005"` à `le="10.0"`, plus `le="+Inf"`. Chaque bucket est
    cumulatif : `le="0.5"` compte toutes les requêtes de moins de 500 ms.
-3. `shop_app_info{version="1.4.2",instance_name="shop-api-1"} 1.0`. La valeur est toujours 1 ;
+3. `shop_app_info{instance_name="shop-api-1",version="1.4.2"} 1.0`. La valeur est toujours 1 ;
    l'information est dans les labels. C'est le pattern *info metric*, on l'utilisera au jour 2
    pour une jointure.
 4. Elle monte à chaque commande. Un counter, donc.
@@ -353,8 +353,8 @@ requête, le mode *Table* / *Graph*, la complétion dans la barre de requête).
 4. Combien de requêtes `POST` sur `/api/checkout` depuis le démarrage de shop-api-1 ?
 
 **Corrigé.**
-1. Une vingtaine (ça dépend des routes déjà appelées) : chaque combinaison
-   méthode × route × code × instance est une série.
+1. Une quarantaine, une vingtaine par instance (ça dépend des routes déjà appelées) : chaque
+   combinaison méthode × route × code × instance est une série.
 2. `http_requests_total{instance="shop-api-2:5000"}`
 3. `http_requests_total{status=~"4..|5.."}`
 4. `http_requests_total{instance="shop-api-1:5000", method="POST", route="/api/checkout"}` :
@@ -474,7 +474,8 @@ configuration cassée qui traîne, personne ne s'en rend compte sans alerte.
 Ajoutez-la à Prometheus **sans** la lister dans `prometheus.yml` :
 1. Ajoutez un job `file-sd` qui lit tous les fichiers `targets/*.yml`.
 2. Créez `prometheus/targets/extra.yml` avec la cible `inbox:8080` et un label `tier: outils`.
-3. Vérifiez sans recharger que la cible apparaît (comptez jusqu'à 30).
+3. Rechargez une fois (pour le nouveau job), puis vérifiez que la cible apparaît : les fichiers
+   de cibles, eux, sont relus toutes les 30 s sans reload.
 
 **Corrigé.**
 
@@ -502,29 +503,30 @@ pour compter les notifications reçues.
 (`/etc/prometheus` dans le conteneur, donc `prometheus/targets/` sur la machine). Erreur
 classique : écrire un chemin absolu de la machine hôte.
 
-### Exercice 1.8 — Relabeling (bonus, 10 min)
+### Exercice 1.8 — Relabeling (bonus, 10 min, après le TP 1)
 
-**Énoncé.** L'exporter Redis (`redis-exporter:9121`) expose ses propres métriques Go
-(`go_*`, `process_*`, `promhttp_*`) en plus des métriques Redis. Ajoutez un job `redis-light`
-qui scrape cet exporter en jetant ces métriques internes. Comparez le nombre de séries des
-deux jobs avec `count by (job) ({job=~"redis.*"})` (il faudra avoir fait le TP 2 pour le job
-`redis` complet ; sinon, comparez avant/après en changeant le job).
+**Énoncé.** Le Node Exporter expose ses propres métriques internes (`go_*`, `process_*`,
+`promhttp_*`) en plus des métriques de la machine. Ajoutez un second job `node-light` qui
+scrape `node-exporter:9100` en jetant ces métriques internes. Comparez le nombre de séries des
+deux jobs avec `count by (job) ({job=~"node.*"})`.
 
 **Corrigé.**
 
 ```yaml
-  - job_name: redis-light
+  - job_name: node-light
     static_configs:
-      - targets: ["redis-exporter:9121"]
+      - targets: ["node-exporter:9100"]
     metric_relabel_configs:
       - source_labels: [__name__]
         regex: "go_.*|process_.*|promhttp_.*"
         action: drop
 ```
 
-Le job complet a une trentaine de séries de plus. Sur un parc de cinq cents exporters, c'est
-quinze mille séries économisées. C'est le genre de règle qu'on met en place dès le début et
-qu'on oublie ensuite.
+Le job complet a une quarantaine de séries de plus. Sur un parc de cinq cents machines, ça fait
+vingt mille séries économisées. C'est le genre de règle qu'on met en place dès le début et
+qu'on oublie ensuite. Une fois la comparaison faite, je fais **retirer** `node-light` : deux
+jobs sur la même cible dupliquent toutes les séries, et les dashboards de demain afficheraient
+tout en double. En vrai, on met le `metric_relabel_configs` directement sur le job `node`.
 
 ---
 
@@ -636,8 +638,8 @@ approximations, la syntaxe complète est pour demain, les fonctions nécessaires
 5. La formule : `node_cpu_seconds_total` est un counter par cœur et par mode (secondes passées
    dans chaque mode). `rate(...[5m])` donne la fraction du temps passée en `idle` sur 5 min,
    par cœur. `avg` fait la moyenne des cœurs. `1 - idle` = occupé. `× 100` = pourcentage.
-   Je passe cinq minutes là-dessus, c'est la requête la plus recopiée de l'histoire de
-   Prometheus et personne ne la comprend la première fois.
+   Je passe cinq minutes là-dessus : tout le monde la recopie, peu de gens la comprennent la
+   première fois.
 
 Je fais lancer `./lab.sh chaos cpu 120` et observer la courbe monter sur l'onglet Graph.
 
@@ -690,10 +692,12 @@ backup_files_total 1234
 ```
 
 Sur Mac/Linux : `echo "backup_last_run_timestamp_seconds $(date +%s)" > node-exporter/textfile/backup.prom`.
-Sur Windows PowerShell : `"backup_last_run_timestamp_seconds $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Set-Content node-exporter/textfile/backup.prom`.
+Sur Windows PowerShell, attention aux fins de ligne : `Set-Content` écrit du CRLF, que le
+collector refuse. Il faut forcer le LF :
+`[IO.File]::WriteAllText("node-exporter/textfile/backup.prom", "backup_last_run_timestamp_seconds $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())`n")`.
 
-Point d'attention : le fichier doit se terminer par un saut de ligne, et une erreur de format
-fait échouer tout le fichier (métrique `node_textfile_scrape_error` à 1). Je montre la métrique.
+Point d'attention : le fichier doit se terminer par un saut de ligne, en LF uniquement, et une
+erreur de format fait échouer tout le fichier (métrique `node_textfile_scrape_error` à 1). Je montre la métrique.
 
 > **Anecdote — les sauvegardes fantômes.** Chez un client, un script de sauvegarde écrivait
 > « OK » dans un log depuis dix-huit mois. Personne ne lisait le log. Le jour où on a eu besoin
@@ -715,8 +719,8 @@ fait échouer tout le fichier (métrique `node_textfile_scrape_error` à 1). Je 
    accès à grafana.com pour l'import par ID ; sinon, on s'en passe.
 
 **Corrigé.** `topk(1, 100 * (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes))`.
-Le dashboard 1860 est parfait pour montrer la puissance de Grafana... et ses excès : trois cents
-panneaux, personne ne les lit. Demain on construira le nôtre, avec dix panneaux qui répondent à
+Le dashboard 1860 est parfait pour montrer la puissance de Grafana... et ses excès : des
+dizaines de panneaux, personne ne les lit. Demain on construira le nôtre, avec dix panneaux qui répondent à
 de vraies questions.
 
 **Ce que je vérifie.** Que le job `node` est bien dans le `prometheus.yml` de tout le monde :
@@ -771,7 +775,7 @@ communautaires les supposent :
 
 **Les buckets d'histogramme.** Par défaut : de 5 ms à 10 s, adaptés à du web. Pour un batch
 qui dure des minutes ou une requête SQL en microsecondes, on les redéfinit. Un p95 ne peut pas
-être plus précis que les buckets : si tout tombe entre `le="0.5"` et `le="1"`, le p95 dira
+être plus précis que les buckets : si tout tombe entre `le="0.5"` et `le="1.0"`, le p95 dira
 « quelque part entre 500 ms et 1 s ». C'est l'argument des native histograms.
 
 **RED et USE.** Deux méthodes pour ne rien oublier :
@@ -779,7 +783,7 @@ qui dure des minutes ou une requête SQL en microsecondes, on les redéfinit. Un
 - Pour une *ressource* (CPU, disque, file) : **U**tilisation, **S**aturation, **E**rrors.
 Les *golden signals* de Google SRE ajoutent la saturation aux trois de RED.
 
-**La cardinalité, le seul vrai danger.** Chaque valeur distincte d'un label crée une série.
+**La cardinalité.** Chaque valeur distincte d'un label crée une série.
 Une série coûte de la mémoire (quelques ko dans le head) et de l'index. Quelques règles :
 - `method` (5 valeurs), `status` (10), `route` (50) : parfait.
 - `user_id`, `session_id`, `request_id`, une adresse IP client, un email : interdit. Un million
@@ -862,7 +866,7 @@ le port 9121.
       - targets: ["redis-exporter:9121"]
 ```
 
-`INCR` domine (chaque appel API incrémente un compteur). Remarque : l'exporter est configuré
+`incrby` domine (chaque appel API incrémente un compteur ; redis-py envoie INCRBY). Remarque : l'exporter est configuré
 par variable d'environnement `REDIS_ADDR` dans le compose ; c'est le pattern habituel, un
 exporter par instance de service, colocalisé (sidecar en Kubernetes).
 
@@ -916,8 +920,8 @@ et étiquette le résultat `instance="http://shop-api-1:5000/health"`.
 
 Quand on arrête `shop-api-2` : `up{job="shop-api", instance="shop-api-2:5000"}` passe à 0 (la
 cible est injoignable) mais `up{job="blackbox-http", instance="http://shop-api-2:5000/health"}`
-reste à 1 (l'exporter, lui, répond très bien) et c'est `probe_success` qui passe à 0. C'est LE
-point à faire comprendre : avec le blackbox, `up` ne veut pas dire ce qu'on croit.
+reste à 1 (l'exporter, lui, répond très bien) et c'est `probe_success` qui passe à 0. Avec le
+blackbox, `up` ne veut pas dire ce qu'on croit ; je m'assure que tout le monde l'a vu.
 
 Division par 86400 pour les jours de certificat.
 
@@ -980,7 +984,7 @@ Je fais le tour à l'oral, réponses au tableau :
 8. Quel est le suffixe d'un counter ? D'une durée ? *(`_total`, `_seconds`)*
 
 **État attendu du `prometheus.yml` ce soir** : jobs `prometheus`, `shop-api`, `node`, `file-sd`,
-`redis`, `pushgateway`, `blackbox-http` (et `redis-light` pour ceux qui ont fait le bonus). Le
+`redis`, `pushgateway`, `blackbox-http` (le job `node-light` du bonus a été retiré). Le
 corrigé complet est `solutions/jour-1/prometheus.yml`. Je demande à chacun de le comparer avec le
 sien avant de partir : demain matin, tout le monde repart du même point.
 

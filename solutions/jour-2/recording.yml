@@ -20,7 +20,7 @@ groups:
 
       # Latence p95 par route (histogramme agrégé sur les deux instances)
       - record: route:http_request_duration_seconds:p95_5m
-        expr: histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job="shop-api"}[5m])))
+        expr: histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job="shop-api", route=~"/api/.*"}[5m])))
 
       # Chiffre d'affaires par heure (euros/h), toutes instances
       - record: job:shop_revenue_euros:rate1h

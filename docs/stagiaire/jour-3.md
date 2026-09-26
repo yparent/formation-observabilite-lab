@@ -156,7 +156,7 @@ Alertmanager (filtre *Inhibited*) ? Redémarrez shop-api-2, chaos off.
 - **Slack** : `slack_configs` avec `api_url_file` (incoming webhook) ou token d'application ;
   `channel`, `title`, `text` templatables.
 - **PagerDuty** : `pagerduty_configs` avec `routing_key_file` (Events API v2) ; `severity`.
-- **Microsoft Teams** : les connecteurs Office 365 sont retirés. En 2026 on crée un flux
+- **Microsoft Teams** : les connecteurs Office 365 sont coupés depuis mai 2026. On crée un flux
   **Workflows** dans le canal (« Post to a channel when a webhook request is received ») et on
   utilise son URL dans `msteamsv2_configs` (Alertmanager) ou le contact point *Microsoft Teams*
   (Grafana). Le flux attend une Adaptive Card, générée automatiquement.
@@ -180,8 +180,8 @@ Groupe `infrastructure` dans `alerts.yml` :
    `summary` : « CPU à NN % sur <instance> » (`printf "%.0f"`),
    `description` : « L'utilisation CPU dépasse 80 % depuis 2 minutes. ».
 2. Bonus : `HostOutOfMemory` (mémoire > 90 % pendant 5 min), `HostDiskWillFillIn24h`
-   (`predict_linear` sur 6 h, et espace < 20 %), `BackupTooOld` (dernière sauvegarde Pushgateway
-   > 24 h), `PrometheusConfigReloadFailed`.
+   (`predict_linear` sur 6 h, et espace < 20 %), `BackupTooOld` (dernière sauvegarde
+   Pushgateway de plus de 24 h), `PrometheusConfigReloadFailed`.
 3. Ajoutez un test unitaire pour `HostHighCpuLoad` dans `prometheus/tests/cpu_test.yml` : une
    série `node_cpu_seconds_total{mode="idle", cpu="0", instance="srv", job="node"}` **qui
    n'augmente plus** (vingt valeurs identiques), et vérifiez l'alerte à `eval_time: 4m`.
@@ -361,7 +361,8 @@ docker compose run --rm --no-deps --user root --entrypoint sh prometheus -c \
 docker compose start prometheus
 ```
 
-4. Vérifiez que l'historique est là. Qu'a-t-on perdu ?
+4. Vérifiez que l'historique est là. Qu'a-t-on perdu ? (Le `chown nobody` correspond à
+   l'utilisateur de l'image officielle.)
 
 > 
 

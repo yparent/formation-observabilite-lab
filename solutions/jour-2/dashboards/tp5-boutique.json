@@ -99,9 +99,13 @@
   "links": [
     {
       "title": "Serveur Linux",
-      "type": "link",
-      "url": "/d/formation-serveur-linux",
+      "type": "dashboards",
+      "tags": [
+        "node-exporter"
+      ],
+      "asDropdown": false,
       "icon": "external link",
+      "includeVars": false,
       "keepTime": true,
       "targetBlank": false,
       "tooltip": "Voir l'infrastructure"
@@ -692,7 +696,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (route) (rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (route) (rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\", route=~\"/api/.*\"}[5m]))",
           "legendFormat": "",
           "range": false,
           "instant": true,
@@ -705,7 +709,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job=\"shop-api\", instance=~\"$instance\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job=\"shop-api\", instance=~\"$instance\", route=~\"/api/.*\"}[5m])))",
           "legendFormat": "",
           "range": false,
           "instant": true,

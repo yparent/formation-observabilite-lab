@@ -62,7 +62,10 @@ td code { font-size: 8.2pt; }
 blockquote { margin: 3mm 0 4mm; padding: 2.5mm 4mm; background: var(--note-bg); border-left: 1.2mm solid var(--accent); border-radius: 1mm; break-inside: avoid; }
 blockquote p { margin: 0 0 1.5mm; }
 blockquote p:last-child { margin: 0; }
-blockquote.answer { background: #fbfbfc; border-left-color: #b9c0cc; min-height: 14mm; }
+div.answer { margin: 2mm 0 4mm; padding: 2mm 4mm; background: #fbfbfc; border-left: 1.2mm solid #b9c0cc; border-radius: 1mm; break-inside: avoid; break-before: avoid; font-size: 9.5pt; color: var(--muted); }
+p:has(+ div.answer), ol:has(+ div.answer), ul:has(+ div.answer), pre:has(+ div.answer) { break-after: avoid; }
+blockquote.answer { background: #fbfbfc; border-left-color: #b9c0cc; min-height: 14mm; break-before: avoid; }
+p:has(+ blockquote.answer), ol:has(+ blockquote.answer), ul:has(+ blockquote.answer) { break-after: avoid; }
 figure { margin: 3mm 0 4mm; break-inside: avoid; }
 figure img { max-width: 100%; max-height: 120mm; height: auto; display: block; margin: 0 auto; border: 1px solid var(--line); border-radius: 1.5mm; }
 figcaption { font-size: 8.5pt; color: var(--muted); text-align: center; margin-top: 1.2mm; }
@@ -120,9 +123,30 @@ def fix_markdown(text: str) -> str:
     return "\n".join(out)
 
 
+def answer_boxes(text: str) -> str:
+    """Un bloc de lignes '>' vides (ou avec un libellé court finissant par ':') devient un cadre à remplir."""
+    out, i, lines = [], 0, text.split("\n")
+    while i < len(lines):
+        if lines[i].startswith(">"):
+            j = i
+            while j < len(lines) and lines[j].startswith(">"):
+                j += 1
+            block = [l[1:].strip() for l in lines[i:j]]
+            texts = [b for b in block if b]
+            if len(texts) <= 1 and (not texts or (texts[0].endswith(":") and len(texts[0]) < 60)):
+                n = max(2, len(block))
+                label = f"<em>{texts[0]}</em>" if texts else "&nbsp;"
+                out.append(f'<div class="answer" style="min-height:{5 + 7 * n}mm">{label}</div>')
+                i = j
+                continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
 def md_to_html(text: str) -> str:
     md = markdown.Markdown(extensions=MD_EXT, extension_configs=MD_CFG)
-    return md.convert(fix_markdown(text))
+    return md.convert(answer_boxes(fix_markdown(text)))
 
 
 def headings(html: str):
@@ -172,9 +196,18 @@ def postprocess(html: str) -> str:
         counter[0] += 1
         return f'{m.group(1)}<span class="mk">zq{counter[0]}zq</span>'
     html = re.sub(r'(<h[12] id="[^"]+">)', mark, html)
-    html = re.sub(r"<blockquote>\s*(<p>\s*</p>\s*)*</blockquote>", '<blockquote class="answer"><p>&nbsp;</p></blockquote>', html)
-    html = re.sub(r"<blockquote>\s*<p>([^<]{0,60}?)\s*:?\s*</p>\s*</blockquote>",
-                  lambda m: f'<blockquote class="answer"><p><em>{m.group(1).strip()} :</em></p><p>&nbsp;</p></blockquote>' if len(m.group(1)) < 45 else m.group(0), html)
+    # Zones de réponse du guide stagiaire : un blockquote sans texte (ou avec un simple libellé
+    # "Réponse :" / "Vos requêtes :") devient un cadre à remplir, haut de ~8 mm par ligne ">".
+    def answer(m):
+        inner = m.group(1)
+        paras = [re.sub(r"<[^>]+>", "", x).strip() for x in re.findall(r"<p>(.*?)</p>", inner, flags=re.S)]
+        text = " ".join(paras).strip()
+        if len(text) > 70 or (text and not text.endswith(":")):
+            return m.group(0)
+        lines = max(2, inner.count("<br") + inner.count("</p>") + 1)
+        label = f"<p><em>{text}</em></p>" if text else ""
+        return f'<blockquote class="answer" style="min-height:{6 + 7 * lines}mm">{label}</blockquote>'
+    html = re.sub(r"<blockquote>(.*?)</blockquote>", answer, html, flags=re.S)
     html = re.sub(r'<p><img alt="([^"]*)" src="([^"]+)"\s*/?></p>', r'<figure><img alt="\1" src="\2"><figcaption>\1</figcaption></figure>', html)
     html = re.sub(r"(<h[23][^>]*>.*?)\s\((\d+ min(?:[^)]*)?)\)(</h[23]>)", r'\1<span class="time">\2</span>\3', html)
     html = re.sub(r'<pre>(?=(?:[^<]|<(?!/pre>)){1800,})', '<pre class="long">', html)
@@ -277,7 +310,7 @@ def build_formateur():
           "Formation Prometheus &amp; Grafana",
           "Guide du formateur — déroulé complet des trois jours, exercices corrigés, démonstrations, anecdotes et points de vigilance",
           "Support formateur · édition septembre 2026", body,
-          "<strong>Yohan Parent</strong> · Architecte cloud, formateur", "<strong>3 jours</strong> · 16 modules · 9 TP · 60+ exercices",
+          "<strong>Yohan Parent</strong> · Architecte cloud, formateur", "<strong>3 jours</strong> · 16 modules · 9 TP · 39 exercices",
           "Formation Prometheus & Grafana", "Guide du formateur")
 
 

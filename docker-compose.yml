@@ -87,6 +87,7 @@ services:
     ports: ["9093:9093"]
     volumes:
       - ./alertmanager:/etc/alertmanager
+      - ./alertmanager/amtool.yml:/etc/amtool/config.yml:ro
       - alertmanager-data:/alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml

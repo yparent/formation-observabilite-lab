@@ -666,28 +666,37 @@
       },
       "transformations": [
         {
-          "id": "merge",
-          "options": {}
+          "id": "joinByField",
+          "options": {
+            "byField": "mountpoint",
+            "mode": "outer"
+          }
         },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "job": true,
-              "instance": true,
-              "device": true
+              "Time 1": true,
+              "Time 2": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "job 1": true,
+              "job 2": true,
+              "instance 1": true,
+              "instance 2": true,
+              "device 1": true,
+              "device 2": true,
+              "fstype 2": true
             },
             "renameByName": {
               "Value #A": "Taille",
               "Value #B": "Disponible",
               "mountpoint": "Montage",
-              "fstype": "Type"
+              "fstype 1": "Type"
             },
             "indexByName": {
               "mountpoint": 0,
-              "fstype": 1,
+              "fstype 1": 1,
               "Value #A": 2,
               "Value #B": 3
             }

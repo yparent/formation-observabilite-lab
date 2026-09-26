@@ -61,7 +61,7 @@ l'extérieur.
 | `=` | égal | `{job="shop-api"}` |
 | `!=` | différent | `{route!="/metrics"}` |
 | `=~` | regex (ancrée : `^...$`) | `{status=~"5.."}` |
-| `!~` | regex négative | `{device!~"lo\|veth.*"}` |
+| `!~` | regex négative | `{device!~"lo.*"}` |
 
 Les regex sont ancrées : `status=~"5.."` matche exactement trois caractères. Pour « commence
 par », `=~"5.*"`. Depuis Prometheus 3, le `.` matche aussi les sauts de ligne (rare en
@@ -124,7 +124,8 @@ projette le corrigé d'un ou deux exercices.
 **Énoncés et corrigés.**
 
 **2.1** — Toutes les cibles et leur état.
-`up` — 8 séries (tous les jobs du jour 1), valeur 1 partout si tout va bien. `up{job="shop-api"}` : 2.
+`up` — 11 séries (tous les jobs du jour 1, dont quatre sondes blackbox), valeur 1 partout si
+tout va bien. `up{job="shop-api"}` : 2.
 
 **2.2** — Les requêtes HTTP en erreur (4xx ou 5xx) sur la boutique, sans le `/metrics`.
 `http_requests_total{job="shop-api", status=~"4..|5..", route!="/metrics"}`
@@ -197,7 +198,7 @@ Règle de la fenêtre : au moins **4 × scrape_interval**, donc `[1m]` minimum a
 à 15 s ; `[5m]` en pratique. Trop court, des trous ; trop long, on lisse les pics. Dans
 Grafana, `$__rate_interval` calcule la bonne fenêtre selon le zoom : on l'utilisera partout.
 
-**Le taux d'erreur.** Le ratio le plus écrit au monde :
+**Le taux d'erreur.** Le ratio qu'on retrouve dans tous les dashboards :
 
 ```
 sum(rate(http_requests_total{status=~"5.."}[5m]))
@@ -230,9 +231,9 @@ un SLO (la moyenne cache les pires cas).
 
 **Native histograms.** Un seul échantillon par série au lieu d'un par bucket, buckets
 exponentiels automatiques, précision bien meilleure. `histogram_quantile(0.95, sum(rate(x[5m])))`
-sans `by (le)`. Encore derrière un feature flag (`--enable-feature=native-histograms`) en
-3.15, et il faut que la bibliothèque cliente les produise. On les regarde de loin ; d'ici un
-ou deux ans ils seront la norme.
+sans `by (le)`. Stables depuis Prometheus 3.9, il suffit de `scrape_native_histograms: true`
+dans la configuration... et d'une bibliothèque cliente qui les produit, ce qui reste le point
+bloquant en 2026. On les regarde de loin ; ils deviendront la norme.
 
 **Les fonctions `_over_time`.** Elles s'appliquent aux gauges sur un range vector :
 `max_over_time(shop_cart_items[1h])`, `avg_over_time`, `min_over_time`, `last_over_time`,
@@ -371,16 +372,19 @@ histogrammes toutes les cinq secondes.
 3. `instance:http_errors:ratio_rate5m` — ratio d'erreurs 5xx par instance (0 à 1).
 4. `route:http_request_duration_seconds:p95_5m` — p95 par route.
 5. `job:shop_revenue_euros:rate1h` — CA en euros par heure.
+
 Puis, dans un groupe `node_recording` (intervalle 30 s) :
 6. `instance:node_cpu_utilisation:ratio_rate5m` — CPU utilisé (0 à 1).
 7. `instance:node_memory_utilisation:ratio` — mémoire utilisée (0 à 1).
+
 Validez (`./lab.sh check`), rechargez, vérifiez dans **Status → Rules** et interrogez
 `job:http_requests:rate5m`.
 
 **Corrigé.** Le fichier complet est `solutions/jour-2/recording.yml`. Les points à commenter :
 - `interval: 15s` au niveau du groupe surcharge `evaluation_interval`.
 - Le ratio d'erreur garde `by (instance)` des deux côtés, sinon appariement impossible.
-- Le p95 garde `route` et `le` dans le `sum by`.
+- Le p95 garde `route` et `le` dans le `sum by`, et se limite aux routes `/api/.*` : sans
+  trafic, un quantile vaut NaN et polluerait les tables.
 - On stocke des ratios (0-1), pas des pourcentages : Grafana convertira (`percentunit`), et
   les alertes compareront à `0.05`, pas à `5`. Une convention, à tenir partout.
 
@@ -389,7 +393,7 @@ Validez (`./lab.sh check`), rechargez, vérifiez dans **Status → Rules** et in
 **Énoncé.** Ouvrez `prometheus/tests/alerts_test.yml` : il teste l'alerte `TargetDown` avec des
 séries simulées. Lancez `./lab.sh test`. Puis ajoutez un test pour votre recording rule
 `job:http_requests:rate5m` : avec une série `http_requests_total{job="shop-api", instance="a"}`
-qui vaut `0+10x10` (0, 10, 20... toutes les 15 s), que doit valoir la règle à `eval_time: 5m` ?
+qui vaut `0+10x40` (0, 10, 20... toutes les 15 s), que doit valoir la règle à `eval_time: 5m` ?
 
 **Corrigé.** À 15 s d'intervalle, +10 par scrape = 10/15 ≈ 0,667 req/s.
 
@@ -619,9 +623,10 @@ scheme → Single color (orange)* puis *Fill opacity : 30*.
    Query type *Instant*.
 9. **Systèmes de fichiers** — Table. Deux requêtes *Instant* au format *Table* :
    `node_filesystem_size_bytes` et `node_filesystem_avail_bytes` (mêmes filtres). Transformations :
-   *Merge*, puis *Organize fields* pour masquer `Time`, `__name__`, `job`, `instance`, `device`
-   et renommer `Value #A` → Taille, `Value #B` → Disponible, `mountpoint` → Montage, puis *Sort
-   by* Disponible croissant. Unité bytes.
+   *Join by field* (champ `mountpoint`, mode *Outer*), puis *Organize fields* pour masquer les
+   colonnes `Time`, `__name__`, `job`, `instance`, `device` (en double, suffixées 1 et 2) et
+   renommer `Value #A` → Taille, `Value #B` → Disponible, `mountpoint` → Montage, `fstype 1` →
+   Type, puis *Sort by* Disponible croissant. Unité bytes.
 10. **Trafic réseau** — Time series, réception en positif, émission en négatif (multiplier par
     −1), unité *bits/sec*, légende `rx {{device}}` / `tx {{device}}`.
 
@@ -631,8 +636,10 @@ Bar gauge : `100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squas
 légende `{{mountpoint}}`.
 
 Table : les deux requêtes en *Format : Table* et *Type : Instant* (menu *Options* sous la
-requête). Sans *Merge*, on obtient deux tables ; le *Merge* apparie sur les labels communs.
-*Organize fields* permet aussi de réordonner par glisser-déposer.
+requête). Sans transformation, on obtient deux tables. *Join by field* les apparie sur le
+champ choisi (`mountpoint`) ; *Merge* aurait aussi pu marcher mais il apparie sur *tous* les
+labels communs et se montre capricieux dès qu'un label diffère. *Organize fields* permet
+aussi de réordonner par glisser-déposer.
 
 Réseau : `sum by (device) (rate(node_network_receive_bytes_total{device!~"lo|veth.*|br.*|docker.*", instance=~"$instance"}[$__rate_interval])) * 8`
 et `- sum by (device) (rate(node_network_transmit_bytes_total{...}[$__rate_interval])) * 8`.
@@ -762,22 +769,22 @@ histogrammes de catégories.
 **Corrigé.** Une annotation à partir d'une requête Prometheus est une requête qui renvoie des
 séries aux instants où l'événement a lieu ; `changes(...) > 0` isole les bascules. En
 production, on annote les déploiements (via l'API `/api/annotations` depuis la CI) : c'est ce qui
-permet de répondre en trois secondes à « ça a commencé après le déploiement de 14h12 ? ».
+permet de répondre tout de suite à « ça a commencé après le déploiement de 14h12 ? ».
 
 ### Étape 5 — Dashboards as code (10 min)
 
 **Énoncé.**
 16. Bouton *Export* (barre du haut) → *Export as code*. Dépliez *Advanced options* : *Model :
-    Classic*, *Format : JSON*. Laissez *Share dashboard with another instance* désactivé.
-    *Copy to clipboard* (ou *Download file*).
+    Classic* (le choix JSON/YAML n'existe que pour V2 Resource). Laissez *Share dashboard with
+    another instance* désactivé. *Copy to clipboard* (ou *Download file*).
 17. Enregistrez le JSON dans `grafana/dashboards/tp5-boutique.json`. Attendez 10 secondes (le
     provider relit le dossier) et rechargez la liste des dashboards : un second « TP 5 » avec un
     cadenas est apparu (provisionné). Supprimez la version manuelle ou renommez-la.
 18. Modifiez un titre de panel dans le JSON. Que se passe-t-il ? Et si vous modifiez le dashboard
     provisionné dans l'interface et sauvegardez ?
 
-**Corrigé.** Le provider `grafana/provisioning/dashboards/dashboards.yml` a `allowUiUpdates: true`
-: on peut sauvegarder depuis l'interface, mais la prochaine modification du fichier écrasera. En
+**Corrigé.** Le provider `grafana/provisioning/dashboards/dashboards.yml` a `allowUiUpdates: true`,
+donc on peut sauvegarder depuis l'interface, mais la prochaine modification du fichier écrasera. En
 production, on met `allowUiUpdates: false` et `disableDeletion: true` : la seule source de vérité
 est Git. Avec un `uid` fixe dans le JSON, l'URL du dashboard ne change jamais, même après
 suppression/recréation : indispensable pour les liens et les runbooks.
@@ -842,7 +849,7 @@ ailleurs. Dashboards provisionnés en lecture seule dans un dossier « Officiel 
 | Grafana Assistant (IA) | Preview, via connexion Cloud | Preview | Oui |
 | Prix | Gratuit | Licence par utilisateur actif | Free tier puis à l'usage |
 
-Ma réponse honnête : 90 % des entreprises n'ont pas besoin d'Enterprise. On y va pour SAML/SCIM
+Ma réponse : la plupart des entreprises n'ont pas besoin d'Enterprise. On y va pour SAML/SCIM
 imposés par la sécurité, pour un connecteur commercial, ou pour les rapports. Grafana Cloud est
 intéressant pour ne pas opérer Prometheus/Loki/Tempo soi-même (c'est Mimir derrière).
 
@@ -858,7 +865,7 @@ rôle *Viewer*. Ouvrez une fenêtre de navigation privée, connectez-vous avec c
 peut-elle faire ? Essayez de modifier le TP 5.
 
 **Corrigé.** Elle voit tout, modifie rien, n'a pas Explore (par défaut les Viewers n'ont pas
-Explore ; `viewers_can_edit` n'existe plus depuis la 10, il faut des permissions par dossier).
+Explore ; `viewers_can_edit` a été retiré en Grafana 12, il faut des permissions par dossier).
 Le bouton *Edit* est absent.
 
 ### Exercice 2.31 — Une team éditrice sur son dossier (10 min)
@@ -904,8 +911,8 @@ curl -s -X POST http://localhost:3000/api/annotations \
 ```
 
 L'annotation apparaît sur tous les dashboards dont la source d'annotations intégrée
-(*Annotations & Alerts*) est active, sur le trait de temps courant. En CI, c'est trois lignes
-dans le pipeline. Remarque : l'API historique `/api/...` reste fonctionnelle en 13 mais Grafana
+(*Annotations & Alerts*) est active, sur le trait de temps courant. En CI, c'est une étape
+de quelques lignes dans le pipeline. Remarque : l'API historique `/api/...` reste fonctionnelle en 13 mais Grafana
 la fait progressivement migrer vers `/apis/...` (API à la Kubernetes) ; pour les scripts, les
 deux marchent aujourd'hui.
 

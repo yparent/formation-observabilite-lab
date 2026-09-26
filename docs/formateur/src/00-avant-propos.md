@@ -34,7 +34,7 @@ immédiatement à quelque chose de concret qui tourne sous les yeux des stagiair
 | Sauvegarde, restauration | J3 après-midi | TP 9 |
 | Mise à l'échelle | J3 fin | Module 16 |
 
-## Les trois règles que je me fixe
+## Les règles que je me fixe
 
 1. **Jamais plus de 20 minutes sans que les stagiaires touchent au clavier.** Chaque module
    théorique est suivi d'exercices courts. Les gros TP arrivent quand les briques sont posées.
@@ -58,15 +58,16 @@ Si le groupe est en retard, ce qui peut sauter sans casser la suite :
 
 ## Matériel
 
-- Ce guide (PDF) et le deck (PowerPoint), dossier `docs/formateur/`
+- Ce guide (PDF), dossier `docs/formateur/`, et le deck (PowerPoint), dossier `docs/slides/`
 - Les trois guides stagiaires, un par jour, dossier `docs/stagiaire/` (PDF ou Markdown pour Notion).
   Je ne distribue le guide du jour que le matin même.
 - Le dépôt GitHub, branche `formation-2026` : https://github.com/yparent/formation-observabilite-lab
-- Les corrigés dans `solutions/` de la branche `formation-2026-formateur` (jamais distribuée)
+- Les corrigés (`solutions/`), ce guide et le deck sont sur la branche `formation-2026-formateur`,
+  que je ne distribue pas. La branche `formation-2026` des stagiaires n'en contient aucun.
 
 ## L'environnement technique
 
-Tout tourne en conteneurs. Trois modes possibles pour les stagiaires, à valider **avant** la
+Tout tourne en conteneurs. Plusieurs modes possibles pour les stagiaires, à valider **avant** la
 formation avec le client :
 
 | Mode | Avantages | Points d'attention |

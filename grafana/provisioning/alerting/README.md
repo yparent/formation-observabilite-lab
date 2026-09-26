@@ -1,6 +1,6 @@
 # Provisioning de l'alerting Grafana (Jour 3, TP 8)
 
-Déposez ici des fichiers YAML décrivant contact points, notification policies,
+Déposez ici des fichiers YAML (au TP 8 : `formation.yml`) décrivant contact points, notification policies,
 alert rules et mute timings. Grafana les charge au démarrage.
 
 Le format est documenté ici :

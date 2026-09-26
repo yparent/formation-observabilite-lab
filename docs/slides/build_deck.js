@@ -153,10 +153,11 @@ function exercises(t, items, note) {
   const half = Math.ceil(items.length / 2);
   [items.slice(0, half), items.slice(half)].forEach((col, ci) => {
     col.forEach((it, i) => {
-      const y = 1.35 + i * 0.72, x = 0.5 + ci * 4.6;
+      const step = half > 5 ? 0.6 : 0.72;
+      const y = 1.35 + i * step, x = 0.5 + ci * 4.6;
       s.addShape(pres.ShapeType.ellipse, { x, y: y + 0.05, w: 0.42, h: 0.42, fill: { color: C.orange }, line: { color: C.orange } });
       s.addText(it[0], { x, y: y + 0.05, w: 0.42, h: 0.42, fontFace: FONT, fontSize: 9.5, bold: true, color: C.white, align: "center", valign: "middle", isTextBox: true, margin: 0 });
-      s.addText(it[1], { x: x + 0.55, y, w: 3.85, h: 0.6, fontFace: FONT, fontSize: 12, color: C.ink, isTextBox: true, margin: 0, valign: "middle" });
+      s.addText(it[1], { x: x + 0.55, y, w: 3.85, h: step - 0.05, fontFace: FONT, fontSize: half > 5 ? 11 : 12, color: C.ink, isTextBox: true, margin: 0, valign: "middle" });
     });
   });
   if (note) notes(s, note);
@@ -282,8 +283,10 @@ section("MODULE 2", "Architecture de Prometheus", "Les composants, le modèle de
   notes(s, "Je dessine au tableau dans cet ordre : cibles, serveur (scraper, stocker, évaluer), Alertmanager, Grafana, découverte de services.");
 }
 code("Le modèle de données", `http_requests_total{method="GET", route="/api/products", status="200"} 51
-│                   │                                                   │
-métrique            labels (dimensions)                                valeur
+
+  métrique : http_requests_total
+  labels   : method, route, status   (les dimensions)
+  valeur   : 51                      (+ un timestamp en ms)
 
 Une série = un nom + un jeu de labels.
 Un échantillon = une valeur + un timestamp (ms).
@@ -335,8 +338,8 @@ exercises("Exercices 1.1 à 1.4 — prise en main (40 min)", [
 // Module 4
 section("MODULE 4", "Configuration de Prometheus", "Lire et modifier prometheus.yml en sécurité.");
 code("Anatomie de prometheus.yml", `global:
-  scrape_interval: 15s        # le pouls
-  evaluation_interval: 15s    # rythme des règles
+  scrape_interval: 15s      # le pouls
+  evaluation_interval: 15s  # rythme des règles
   external_labels:
     cluster: formation
 
@@ -523,10 +526,10 @@ cards("Ce qui rend un dashboard lisible", [
 twoCol("Variables, transformations, annotations", { h: "Variables", items: ["Un menu déroulant qui filtre tous les panels", "Query : label_values(node_uname_info, instance)", "Multi-valeur + All → =~ et non =", "Chaînées : $route dépend de $instance", "$__rate_interval, $__range, $__interval"] },
   { h: "Transformations et annotations", items: ["Merge, Organize fields, Sort by, Reduce, Filter, calculs", "Indispensables pour les tables", "Annotation : un trait vertical sur tous les graphiques", "changes(shop_chaos_mode[1m]) > 0, ou POST /api/annotations depuis la CI"] });
 tp("TP 4", "Un dashboard paramétrable pour un serveur Linux", "L'équipe d'exploitation veut un écran par serveur : d'un coup d'œil, savoir s'il va bien ; en dessous, le détail. Le même dashboard pour tous les serveurs, avec une liste déroulante.", [
-  { h: "Variable", p: "$instance multi-valeur avec All. Toutes les requêtes en instance=~\"$instance\"." },
+  { h: "Variable", p: "$instance multi-valeur avec All, utilisée dans toutes les requêtes." },
   { h: "Global", p: "Uptime, CPU et mémoire en Gauge avec seuils, charge, cœurs." },
   { h: "CPU, mémoire", p: "Time series empilé par mode (scalar !), mémoire avec override." },
-  { h: "Disque, réseau", p: "Bar gauge, Table avec Merge + Organize + Sort, réseau rx/tx." },
+  { h: "Disque, réseau", p: "Bar gauge, Table avec Join by field + Organize + Sort, réseau rx/tx." },
   { h: "Dispo", p: "State timeline avec value mappings, Stat coloré avec or vector(0)." },
 ], "60 minutes. Le piège de l'étape 2 : diviser par count() sans scalar(). Le dashboard doit finir dans le dossier Formation (le TP 5 y fait un lien).");
 image("TP 4 — le résultat attendu", path.join(IMG, "tp4-serveur-linux.png"), "Dix panels, huit types de visualisation, une variable, des rows", "Je projette ce résultat au début du TP et je le laisse visible.");
@@ -578,8 +581,8 @@ code("Anatomie d'une règle", `groups:
         expr: |
           sum by (instance) (rate(http_requests_total{status=~"5.."}[5m]))
           / sum by (instance) (rate(http_requests_total[5m])) > 0.05
-        for: 2m                 # inactive → pending → firing
-        keep_firing_for: 3m     # anti-clignotement
+        for: 2m               # pending → firing
+        keep_firing_for: 3m   # anti-clignotement
         labels:
           severity: critical
           team: boutique
@@ -589,16 +592,16 @@ code("Anatomie d'une règle", `groups:
           runbook_url: "https://…/shop-errors.md"`, ["Une alerte par série renvoyée : by (instance) → une par instance", "Labels : pour router. Annotations : pour les humains", "Templates Go : $labels, $value, humanize*, printf", "promtool check rules, promtool test rules"], { size: 10 });
 
 section("MODULE 12", "Alertmanager", "Qui prévenir, quand, combien de fois.");
-code("L'arbre de routage", `route:                          # la racine reçoit tout
+code("L'arbre de routage", `route:                       # la racine reçoit tout
   receiver: inbox-default
   group_by: ["alertname", "job"]
-  group_wait: 30s               # attendre avant la 1re notification du groupe
-  group_interval: 5m            # avant d'envoyer les nouveautés d'un groupe
-  repeat_interval: 4h           # re-notifier une alerte toujours active
+  group_wait: 30s            # avant la 1re notification
+  group_interval: 5m         # avant les nouveautés d'un groupe
+  repeat_interval: 4h        # si toujours active
   routes:
     - matchers: [severity = critical]
       receiver: astreinte-teams
-      continue: true            # évaluer aussi les routes suivantes
+      continue: true         # évaluer aussi la suite
     - matchers: [team = boutique]
       receiver: boutique-slack
 
@@ -667,9 +670,9 @@ exercises("Exercices 3.1 à 3.5 — diagnostic (15 min)", [
   ["3.4", "sample_limit: 100 sur redis : que devient up ?"], ["3.5", "?stats=all : brute contre recording rule"],
 ]);
 tp("TP 9", "Sauvegarde, restauration, longue durée, sécurité", "L'audit demande : si le serveur de monitoring brûle, en combien de temps le remettez-vous ? Avez-vous 13 mois d'historique ? Qui peut lire vos métriques ?", [
-  { h: "Snapshot", p: "POST /api/v1/admin/tsdb/snapshot, catastrophe simulée, restauration, qu'a-t-on perdu ?" },
+  { h: "Snapshot", p: "./lab.sh snapshot, catastrophe simulée, restauration, qu'a-t-on perdu ?" },
   { h: "Grafana", p: "grafana.db, export de tous les dashboards par l'API. Ce qui n'y est pas. La vraie réponse : Git." },
-  { h: "Remote write", p: "./lab.sh longterm, write_relabel_configs keep shop_* et recording rules, retard de la file." },
+  { h: "Remote write", p: "./lab.sh longterm, ne garder que shop_* et les recording rules, retard de la file." },
   { h: "Basic auth", p: "Bonus : web.yml bcrypt, --web.config.file, qu'est-ce qui casse ? Réparer, puis retirer." },
 ], "45 minutes. Un snapshot = liens durs vers les blocs + le head : instantané. Ne jamais copier data/ à chaud sans snapshot.");
 
@@ -686,6 +689,20 @@ section("MODULE 16", "Mise à l'échelle et écosystème", "Quand un Prometheus 
     s.addText(st[2], { x: 3.7, y, w: 5.8, h: 0.7, fontFace: FONT, fontSize: 12.5, color: C.ink, isTextBox: true, margin: 0, valign: "middle" });
   });
   notes(s, "Les signaux : OOM et compactions → trop de séries. > 30-60 jours → longue durée. Multi-sites → central. HA vraie → duo ou stockage distribué.");
+}
+{
+  const s = base();
+  title(s, "Le schéma cible", false, "Du brut en local, de l'agrégé au loin, une seule interface pour tout lire");
+  ["Site A", "Site B", "Cluster K8s"].forEach((n, i) => box(s, 0.5, 1.7 + i * 1.05, 1.9, 0.75, `Prometheus\n${n}`, C.orange, C.white, 11));
+  box(s, 4.0, 2.1, 2.4, 1.3, "Mimir · Thanos\nVictoriaMetrics", C.navy, C.white, 13);
+  box(s, 4.0, 3.75, 2.4, 0.6, "Stockage objet (S3)", C.muted, C.white, 11);
+  box(s, 7.5, 2.3, 2.0, 0.9, "Grafana", C.navy2, C.white, 14);
+  [1.7, 2.75, 3.8].forEach((y) => arrow(s, 2.4, y + 0.37, 4.0, 2.75));
+  arrow(s, 5.2, 3.4, 5.2, 3.75); arrow(s, 6.4, 2.75, 7.5, 2.75);
+  s.addText("remote_write", { x: 2.55, y: 1.55, w: 1.4, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
+  s.addText("PromQL", { x: 6.55, y: 2.4, w: 0.9, h: 0.3, fontFace: FONT, fontSize: 10, color: C.muted, isTextBox: true, margin: 0 });
+  s.addText("Rétention courte (7-15 j) et toutes les séries brutes sur chaque Prometheus · rétention longue (13 mois) et vue globale au centre · les API sont compatibles, Grafana ne voit pas la différence.", { x: 0.5, y: 4.55, w: 9, h: 0.55, fontFace: FONT, fontSize: 12, color: C.ink, isTextBox: true, margin: 0 });
+  notes(s, "Le mode agent ou Alloy sur les sites distants remplace un Prometheus complet quand on ne veut rien stocker localement.");
 }
 cards("Et autour", [
   { h: "OpenTelemetry", p: "Le standard d'instrumentation des trois signaux. Prometheus 3 reçoit l'OTLP nativement, noms avec points et UTF-8. Collector / Alloy pour scraper, recevoir, envoyer." },

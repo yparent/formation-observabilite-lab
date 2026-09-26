@@ -6,7 +6,4 @@ global:
     cluster: formation
     role: longterm
 
-scrape_configs:
-  - job_name: prometheus-longterm
-    static_configs:
-      - targets: ["localhost:9090"]
+scrape_configs: []

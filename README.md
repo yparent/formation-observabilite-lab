@@ -82,7 +82,7 @@ blackbox/            modules de sonde
 grafana/             provisioning (datasource, dashboards, alerting) + dashboards JSON
 node-exporter/       textfile collector
 scripts/             batch Pushgateway
-docs/                guides stagiaire (un par jour)
+docs/                guides stagiaire (un par jour) et générateurs de supports
 ```
 
 ## En cas de souci

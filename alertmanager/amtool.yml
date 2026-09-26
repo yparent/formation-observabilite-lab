@@ -1,0 +1,2 @@
+# Configuration d'amtool (montée dans /etc/amtool/config.yml) : évite de répéter --alertmanager.url
+alertmanager.url: http://localhost:9093

@@ -180,12 +180,14 @@ Prometheus **sans** la lister dans `prometheus.yml` :
 3. Rechargez une fois (pour le nouveau job). Vérifiez ensuite que la cible apparaît : les fichiers
    de cibles sont relus automatiquement.
 
-## Exercice 1.8 — Relabeling (bonus)
+## Exercice 1.8 — Relabeling (bonus, après le TP 1)
 
-L'exporter Redis (`redis-exporter:9121`) expose ses propres métriques Go (`go_*`, `process_*`,
-`promhttp_*`) en plus des métriques Redis. Ajoutez un job `redis-light` qui scrape cet exporter
-en jetant ces métriques internes avec `metric_relabel_configs` (`action: drop`). Comparez le
-nombre de séries avec le job `redis` du TP 2 : `count by (job) ({job=~"redis.*"})`.
+Le Node Exporter expose ses propres métriques internes (`go_*`, `process_*`, `promhttp_*`) en
+plus des métriques de la machine. Ajoutez un second job `node-light` qui scrape
+`node-exporter:9100` en jetant ces métriques internes avec `metric_relabel_configs`
+(`action: drop`). Comparez le nombre de séries des deux jobs : `count by (job) ({job=~"node.*"})`.
+Puis **retirez** le job `node-light` (ou déplacez le `metric_relabel_configs` sur le job `node`) :
+deux jobs sur la même cible dupliquent toutes les séries.
 
 *Astuce : `source_labels: [__name__]` et une `regex` avec des `|`.*
 
@@ -257,7 +259,8 @@ Vous avez un script de sauvegarde en cron. Vous voulez savoir quand il a tourné
 2. Vérifiez sur http://localhost:9100/metrics puis dans Prometheus.
 3. Calculez « il y a combien de temps » : `time() - backup_last_run_timestamp_seconds`.
 
-*Astuce Windows : `"backup_last_run_timestamp_seconds $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Set-Content node-exporter/textfile/backup.prom`.*
+*Astuce Windows : `Set-Content` écrit des fins de ligne CRLF que le collector refuse. Utilisez
+`[IO.File]::WriteAllText("node-exporter/textfile/backup.prom", "backup_last_run_timestamp_seconds $([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())`n")`.*
 *Si rien n'apparaît : regardez `node_textfile_scrape_error`.*
 
 ### Partie 5 — Vue d'ensemble
@@ -382,7 +385,7 @@ Vous voulez vérifier depuis l'extérieur que `http://shop-api-1:5000/health`,
 ## Avant de partir
 
 - `prometheus.yml` doit contenir les jobs : `prometheus`, `shop-api`, `node`, `file-sd`, `redis`,
-  `pushgateway`, `blackbox-http`. Tous UP dans Target health.
+  `pushgateway`, `blackbox-http` (sans `node-light`, retiré après le bonus). Tous UP dans Target health.
 - Ne faites pas `./lab.sh reset` : on veut de l'historique pour demain. Sur Codespaces, le
   Codespace peut s'arrêter tout seul, les données restent.
 

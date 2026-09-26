@@ -52,7 +52,7 @@ alerte, c'est un panel de dashboard.
 > alertes, toutes sur des symptômes clients, chacune avec un runbook. La fatigue d'alerte tue
 > plus de systèmes que les pannes.
 
-**Les niveaux.** Trois suffisent : `critical` (on réveille quelqu'un), `warning` (on regarde
+**Les niveaux.** Pas besoin de plus de trois : `critical` (on réveille quelqu'un), `warning` (on regarde
 demain matin), `info` (ticket, tableau de bord). La sévérité est un label, on routera dessus.
 
 **Anatomie d'une règle.**
@@ -61,12 +61,12 @@ demain matin), `info` (ticket, tableau de bord). La sévérité est un label, on
 groups:
   - name: shop-api
     rules:
-      - alert: ShopHighErrorRate                     # nom en CamelCase, unique
-        expr: |                                       # la requête PromQL ; alerte si elle renvoie des séries
+      - alert: ShopHighErrorRate          # nom en CamelCase, unique
+        expr: |                            # alerte si l'expression renvoie des séries
           sum by (instance) (rate(http_requests_total{job="shop-api", status=~"5.."}[5m]))
           / sum by (instance) (rate(http_requests_total{job="shop-api"}[5m])) > 0.05
-        for: 2m                                       # doit être vrai pendant 2 min avant de passer en FIRING
-        keep_firing_for: 3m                           # reste FIRING 3 min après le retour à la normale (anti-flapping)
+        for: 2m                            # vrai pendant 2 min avant FIRING
+        keep_firing_for: 3m                # reste FIRING 3 min après le retour à la normale
         labels:
           severity: critical
           team: boutique
@@ -120,16 +120,16 @@ respecte les silences et les plages horaires.
 **L'arbre de routage.**
 
 ```yaml
-route:                          # la racine : reçoit tout
+route:                          # la racine reçoit tout
   receiver: inbox-default
   group_by: ["alertname", "job"]
-  group_wait: 30s               # attendre 30 s pour regrouper avant la 1re notification
-  group_interval: 5m            # attendre 5 min avant d'envoyer les nouvelles alertes d'un groupe déjà notifié
-  repeat_interval: 4h           # re-notifier une alerte toujours active toutes les 4 h
+  group_wait: 30s               # regrouper avant la 1re notification
+  group_interval: 5m            # avant d'envoyer les nouveautés d'un groupe
+  repeat_interval: 4h           # re-notifier une alerte toujours active
   routes:
     - matchers: [severity = critical]
       receiver: astreinte-teams
-      continue: true            # ne pas s'arrêter là, évaluer aussi les routes suivantes
+      continue: true            # évaluer aussi les routes suivantes
     - matchers: [team = boutique]
       receiver: boutique-slack
 ```
@@ -145,8 +145,7 @@ Sans `group_by` (ou `group_by: ['...']`), une notification par alerte.
 
 **L'inhibition.** `inhibit_rules` : si une alerte *source* est active (`TargetDown` sur
 l'instance X), on tait les alertes *cibles* (`ShopHighErrorRate` sur la même instance X grâce à
-`equal: [instance]`). C'est du bon sens codifié : quand le serveur est éteint, inutile de dire
-qu'il répond lentement.
+`equal: [instance]`). Quand le serveur est éteint, inutile de dire qu'il répond lentement.
 
 **Les silences.** Créés dans l'interface (ou `amtool silence add`), avec des matchers et une
 durée. Pour une maintenance planifiée. Ils s'appliquent après le routage. Les **time intervals**
@@ -169,7 +168,7 @@ JSON.
 ```
 
 **Haute disponibilité.** Plusieurs Alertmanager en cluster (gossip) ; chaque Prometheus envoie
-à tous ; ils dédupliquent entre eux. Trois lignes de configuration, on en parle au module 16.
+à tous ; ils dédupliquent entre eux. Quelques lignes de configuration, on en parle au module 16.
 
 ### Ce que je montre
 
@@ -179,7 +178,8 @@ JSON.
 ![Alertmanager : alertes groupées par receiver](../img/alertmanager-alerts.png)
 
 ![L'Inbox du lab : une carte Teams, deux messages Slack](../img/inbox.png)
-- `docker compose exec alertmanager amtool alert` (les alertes actives), puis
+- `docker compose exec alertmanager amtool alert` (les alertes actives ; `amtool` trouve
+  l'URL dans `/etc/amtool/config.yml`, monté par le compose), puis
   `docker compose exec alertmanager amtool config routes show --config.file=/etc/alertmanager/alertmanager.yml`
   (l'arbre en ASCII) et `... amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml severity=critical team=boutique`
   (« vers quel receiver ? »). Le `--config.file` est obligatoire pour ces deux commandes.
@@ -229,8 +229,9 @@ Validez, testez (`./lab.sh test` doit toujours passer), rechargez. Vérifiez dan
 3. Même exercice avec `./lab.sh chaos latency on` et `ShopCheckoutSlow`.
 4. Regardez le dashboard TP 5 pendant ce temps : les annotations Chaos et le panneau d'erreurs.
 
-**Corrigé.** Pending dès que `rate[5m]` dépasse 5 %, soit ~30 s après le chaos (la fenêtre de 5 min
-se remplit d'erreurs progressivement, mais 40 % d'erreurs fait passer la barre vite). Firing 2 min
+**Corrigé.** Pending dès que `rate[5m]` dépasse 5 %, soit environ une minute après le chaos (la
+fenêtre de 5 min se remplit d'erreurs progressivement ; à 40 % d'erreurs, la barre des 5 % est
+franchie au bout de 40 s environ, plus un scrape et une évaluation). Firing 2 min
 plus tard (`for`). Notification 30 s plus tard (`group_wait`). Au retour : la fenêtre de 5 min met
 plusieurs minutes à redescendre sous 5 %, puis `keep_firing_for: 3m`, puis la notification
 *resolved* au prochain `group_interval`. Total : 8 à 10 minutes. Leçon : chaque paramètre a un coût
@@ -239,7 +240,7 @@ en réactivité, et l'empilement `[5m]` + `for` + `keep_firing_for` + `group_wai
 ### Partie 3 — L'arbre de routage (15 min)
 
 **Énoncé.** Dans `alertmanager/alertmanager.yml` :
-1. Trois receivers vers l'Inbox : `inbox-default` (`/webhook/default`), `infra-inbox`
+1. Les receivers vers l'Inbox : `inbox-default` (`/webhook/default`), `infra-inbox`
    (`/webhook/infra`), `astreinte-teams` en `msteamsv2_configs` vers `http://inbox:8080/teams/astreinte`
    (on mettra une vraie URL Teams au TP 7), `boutique-slack` en `slack_configs` vers
    `http://inbox:8080/slack/boutique`, canal `#boutique-alertes`.
@@ -258,14 +259,15 @@ Dans l'Inbox, on compare le JSON Slack (`attachments` avec `color: danger`) et l
 Teams (`attachments[].content.body[]` de type `TextBlock`) : deux formats générés par Alertmanager
 à partir de la même alerte.
 
-`amtool config routes test` est l'outil que personne ne connaît et qui évite des heures de
-« pourquoi ça n'arrive pas dans le bon canal ».
+`amtool config routes test` est peu connu et évite des heures de « pourquoi ça n'arrive pas
+dans le bon canal ».
 
 ### Partie 4 — Inhibition (5 min)
 
 **Énoncé.** Ajoutez deux `inhibit_rules` : (a) `TargetDown` inhibe `ShopHighErrorRate` et
 `ShopCheckoutSlow` sur la même `instance` ; (b) une alerte `critical` inhibe le `warning` de même
-`alertname` sur la même `instance`. Testez : chaos errors on, puis `docker compose stop shop-api-2`.
+`alertname` sur la même `instance` (règle générique : aucune alerte du lab n'existe en deux
+sévérités, elle ne se déclenchera pas ici). Testez : chaos errors on, puis `docker compose stop shop-api-2`.
 Que voit-on dans Alertmanager ?
 
 **Corrigé.** L'alerte `ShopHighErrorRate{instance="shop-api-2:5000"}` passe *inhibited* dans
@@ -282,7 +284,7 @@ shop-api-2 et remettre le chaos à off.
 2. Ajoutez un `time_intervals` nommé `nuit-et-weekend` (samedi, dimanche, et 20h-8h en
    `Europe/Paris`) et appliquez-le en `mute_time_intervals` sur la route `team = infra`.
 
-**Corrigé.** Piège garanti : un intervalle `20:00` → `08:00` est refusé (« start time cannot be
+**Corrigé.** Le piège habituel : un intervalle `20:00` → `08:00` est refusé (« start time cannot be
 equal or greater than end time »). Il faut deux intervalles : `20:00-24:00` et `00:00-08:00`.
 Grafana a exactement la même contrainte. Deuxième piège : `location` doit être un nom de fuseau
 IANA, et le conteneur doit avoir la base tzdata (l'image officielle l'a).
@@ -327,8 +329,8 @@ PagerDuty gère l'escalade, les plannings, l'acquittement ; Alertmanager lui env
 *resolve* avec la même clé de déduplication.
 
 **Microsoft Teams, la méthode 2026.** Les connecteurs Office 365 (« Incoming Webhook » dans les
-paramètres d'un canal) ont été retirés par Microsoft : création bloquée depuis 2024, arrêt
-définitif pour tous les connecteurs existants fin 2025. L'ancien `msteams_configs` d'Alertmanager
+paramètres d'un canal) ont été retirés par Microsoft : création bloquée depuis août 2024, coupure
+définitive des connecteurs existants en mai 2026, après plusieurs reports. L'ancien `msteams_configs` d'Alertmanager
 est donc déprécié. La méthode actuelle passe par **Workflows** (Power Automate) :
 
 1. Dans Teams, dans le canal cible : **...** → *Workflows* → modèle « **Post to a channel when a
@@ -359,7 +361,7 @@ par un *repository_dispatch* qui déclenche un workflow Actions. Le dépôt cont
 `.github/workflows/alert-to-issue.yml` qui fait exactement ça. Côté émetteur, Grafana (contact
 point *Webhook*, payload personnalisé et en-tête `Authorization: Bearer <token>`) est le plus
 simple ; Alertmanager sait aussi le faire avec `webhook_configs` + `http_config.authorization` +
-le bloc `payload` (Alertmanager ≥ 0.31). Alternative très répandue : un petit relais (une
+le bloc `payload` (Alertmanager ≥ 0.32). Alternative très répandue : un petit relais (une
 fonction serverless, un `n8n`) entre les deux.
 
 **Les templates.** Alertmanager utilise les templates Go. On définit ses blocs dans un fichier
@@ -370,14 +372,12 @@ en contient deux. Ce qu'un bon message contient : le statut, le nombre d'alertes
 sévérité, l'instance, le lien runbook, le lien vers le dashboard. Ce qu'il ne contient pas : un
 dump de tous les labels.
 
-**Grafana OnCall / IRM.** Pour mémoire : Grafana propose sa propre astreinte (plannings,
-escalades, appels) dans Grafana Cloud et Enterprise ; la version OSS d'OnCall est en mode
-maintenance depuis 2025.
+**Grafana IRM.** Pour mémoire : Grafana propose sa propre astreinte (plannings, escalades,
+appels) dans Grafana Cloud ; la version OSS d'OnCall a été archivée en mars 2026.
 
 ### Ce que je montre
 
-- La création du flux Workflows en captures d'écran (dans le deck) ; en direct si j'ai un
-  tenant de démo.
+- La création du flux Workflows, pas à pas (annexe E) ; en direct si j'ai un tenant de démo.
 - Le fichier `.github/workflows/alert-to-issue.yml` et un `curl` de test si le token est disponible.
 
 ---
@@ -453,8 +453,8 @@ Si `team = infra` est avant, l'alerte part vers `infra-inbox` (et se fait muter 
    `teams`). Chronométrez.
 3. Ouvrez la carte : que contient-elle ? Qu'est-ce qui manque pour qu'elle soit vraiment utile ?
 
-**Corrigé.** Pending vers 1 min (le `rate[2m]` doit dépasser 80 %), firing à 3 min, carte Teams
-10 s plus tard. La carte par défaut (`msteamsv2.default.text`) contient tous les labels et
+**Corrigé.** Pending vers 2 min (le `rate[2m]` doit dépasser 80 %, ce qui prend presque toute la
+fenêtre), firing 2 min plus tard, carte Teams 10 s après. La carte par défaut (`msteamsv2.default.text`) contient tous les labels et
 annotations : lisible mais verbeux. Il manque un lien vers le dashboard et le runbook en clair.
 
 ### Partie 4 — Personnaliser le message (15 min)
@@ -530,8 +530,7 @@ d'autres noms :
 
 **Une règle Grafana.** Une ou plusieurs requêtes (A, B...), puis des *expressions* : *Reduce*
 (une série → une valeur : last, mean, max), *Math* (`$A / $B * 100`), *Threshold* (`> 80`),
-*Classic condition*. La condition finale est une expression qui vaut 0 ou 1 par série. Multi-
-dimensionnel : une instance d'alerte par série, comme Prometheus. États : Normal, Pending,
+*Classic condition*. La condition finale est une expression qui vaut 0 ou 1 par série. Multidimensionnel : une instance d'alerte par série, comme Prometheus. États : Normal, Pending,
 Alerting, NoData, Error (les deux derniers sont configurables : traiter NoData comme OK, Alerting
 ou NoData).
 
@@ -653,7 +652,7 @@ C'est plus brutal qu'Alertmanager, qui garde l'ancienne config.
 
 ### Ce que je dis
 
-**Ce qui coûte.** Trois choses : le nombre de séries actives (mémoire), le débit d'échantillons
+**Ce qui coûte.** Principalement : le nombre de séries actives (mémoire), le débit d'échantillons
 (CPU, disque), et les requêtes (CPU, mémoire au moment de la requête). Ordres de grandeur en 2026
 sur une machine correcte : un Prometheus seul tient confortablement 1 à 2 millions de séries
 actives et quelques centaines de milliers d'échantillons par seconde. Mémoire : compter grossièrement
@@ -666,7 +665,7 @@ deux heures, le head est écrit en **bloc** immuable (`01M3E7...` : chunks, inde
 tombstones). Les blocs sont ensuite **compactés** en blocs plus gros (jusqu'à 10 % de la
 rétention). La rétention (`--storage.tsdb.retention.time` et/ou `.size`) supprime les blocs
 entiers. Supprimer des séries ciblées : l'API admin `delete_series` + `clean_tombstones`, et
-Prometheus 3.12 a ajouté une interface pour ça.
+Prometheus 3.14 a ajouté une page dans l'interface pour ça.
 
 **Les séries périmées (staleness).** Quand une série disparaît d'un scrape, Prometheus écrit un
 marqueur et la série disparaît des requêtes instantanées après 5 min. Une série qui change de
@@ -762,7 +761,7 @@ docker compose start prometheus
 ```
 
 4. Vérifiez que l'historique est là (`count(shop_orders_total offset 5m)` renvoie toujours des
-   séries). Qu'a-t-on perdu ?
+   séries). Qu'a-t-on perdu ? (Le `chown nobody` correspond à l'utilisateur de l'image officielle.)
 
 **Corrigé.** Un snapshot est un dossier avec des liens durs vers les blocs existants plus un bloc
 pour le head : quasi instantané, et il ne coûte que le head en espace. On perd ce qui a été ingéré
@@ -793,8 +792,8 @@ done
 Ce qui n'est pas dans les JSON : utilisateurs, teams, permissions, sources de données (et leurs
 secrets, chiffrés dans la base avec `secret_key` de `grafana.ini`), alerting, préférences, plugins.
 D'où : soit on sauvegarde la base (SQLite : copie à chaud acceptable avec `sqlite3 .backup`, mieux
-avec Grafana arrêté ; PostgreSQL : `pg_dump`), soit — la vraie réponse — **tout est provisionné et
-la sauvegarde, c'est Git**. La base ne contient alors que de l'état reconstructible.
+avec Grafana arrêté ; PostgreSQL : `pg_dump`), soit, et c'est la bonne réponse, **tout est provisionné et la
+sauvegarde, c'est Git**. La base ne contient alors que de l'état reconstructible.
 
 ### Partie 3 — Remote write vers un Prometheus longue durée (10 min)
 
@@ -810,12 +809,13 @@ la sauvegarde, c'est Git**. La base ne contient alors que de l'état reconstruct
    `prometheus_remote_storage_highest_timestamp_in_seconds - prometheus_remote_storage_queue_highest_sent_timestamp_seconds`
    (le retard).
 
-**Corrigé.** `solutions/jour-3/prometheus-remote-write.yml`. Une quinzaine de métriques côté
-longue durée contre 900 côté principal. C'est le pattern : du brut local avec une rétention courte,
+**Corrigé.** `solutions/jour-3/prometheus-remote-write.yml`. Une quinzaine de noms de métriques
+côté longue durée (`count(count by (__name__) ({__name__=~".+"}))`) contre plus de 800 côté
+principal. C'est le pattern : du brut local avec une rétention courte,
 de l'agrégé envoyé au loin avec une rétention longue. Le récepteur remote write d'un Prometheus
 est pratique pour un lab ou un petit site ; en production, la cible est Mimir, Thanos Receive,
-VictoriaMetrics ou un service managé (module 16). Remote Write 2.0 (Prometheus 3) réduit la bande
-passante de moitié et transporte les métadonnées et les native histograms.
+VictoriaMetrics ou un service managé (module 16). Remote Write 2.0 (Prometheus 3) réduit nettement la
+bande passante (chaînes internées, compression) et transporte métadonnées et native histograms.
 
 ### Partie 4 — Un mot de passe sur Prometheus (bonus, 10 min)
 
@@ -855,13 +855,14 @@ HA « vraie » (pas de trou pendant un redémarrage) → duo de Prometheus, ou s
    `match[]` sur des recording rules agrégées). Ancien, limité, mais suffisant pour une vue globale
    légère.
 3. **Remote write vers un stockage distribué** :
-   - **Grafana Mimir** (issu de Cortex) : horizontalement scalable, multi-tenant, stockage objet,
-     c'est le moteur de Grafana Cloud.
-   - **Thanos** : sidecar à côté de chaque Prometheus, blocs envoyés en stockage objet, un
-     *Querier* global, déduplication, downsampling. Très répandu, plus de composants.
-   - **VictoriaMetrics** : simple à opérer, très économe, PromQL étendu (MetricsQL). Version
-     single-node ou cluster.
-   Les trois exposent une API compatible Prometheus : Grafana ne voit pas la différence.
+    - **Grafana Mimir** (issu de Cortex) : horizontalement scalable, multi-tenant, stockage objet,
+      c'est le moteur de Grafana Cloud.
+    - **Thanos** : sidecar à côté de chaque Prometheus, blocs envoyés en stockage objet, un
+      *Querier* global, déduplication, downsampling. Très répandu, plus de composants.
+    - **VictoriaMetrics** : simple à opérer, très économe, PromQL étendu (MetricsQL). Version
+      single-node ou cluster.
+
+    Les trois exposent une API compatible Prometheus : Grafana ne voit pas la différence.
 4. **Managé** : Grafana Cloud, Amazon Managed Prometheus, Google Managed Prometheus, Azure Monitor
    managed Prometheus.
 
@@ -874,7 +875,7 @@ pour du neuf.
 
 **Loki et Tempo.** Les mêmes idées appliquées aux logs (Loki indexe les labels, pas le texte) et
 aux traces (Tempo). Grafana les corrèle : d'un pic de latence (Prometheus) vers les traces
-(exemplars) vers les logs, en trois clics. C'est la suite logique de cette formation.
+(exemplars) vers les logs, en quelques clics. C'est la suite logique de cette formation.
 
 **Kubernetes.** kube-prometheus-stack : Prometheus Operator, `ServiceMonitor`, `PodMonitor`,
 `PrometheusRule`, kube-state-metrics, node-exporter, Grafana avec des dizaines de dashboards, le
@@ -882,8 +883,8 @@ tout en un `helm install`. Tout ce qu'on a vu s'applique ; la découverte de ser
 
 ### Ce que je montre
 
-Un schéma (dans le deck) : Prometheus locaux → remote write → Mimir/Thanos/VM → Grafana. Et les
-liens.
+Le schéma du deck : Prometheus locaux → remote write → Mimir/Thanos/VictoriaMetrics → Grafana.
+Et les liens de l'annexe C.
 
 ---
 
@@ -891,7 +892,7 @@ liens.
 
 **Le war game (15 min).** Les stagiaires ne touchent plus à la configuration. Je casse la boutique
 d'une façon qu'ils ne connaissent pas, en ciblant **une seule instance** (le script `lab.sh` casse
-les deux ; moi, je vise) :
+les deux instances ; moi, je vise) :
 
 ```
 curl -X POST http://localhost:5002/chaos/latency/on          # shop-api-2 seulement

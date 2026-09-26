@@ -308,8 +308,8 @@ ne s'apparie pas. Regardez la fonction `scalar()`.*
 
 | # | Panel | Visualisation | Indications |
 |---|---|---|---|
-| 8 | Espace disque utilisé | Bar gauge | horizontal, mode *Gradient*, une barre par `mountpoint`, unité Percent, seuils 75 / 90, exclure `fstype=~"tmpfs\|overlay\|squashfs"`, type Instant |
-| 9 | Systèmes de fichiers | Table | deux requêtes Instant en *Format : Table* (`node_filesystem_size_bytes`, `node_filesystem_avail_bytes`) ; transformations *Merge* → *Organize fields* (masquer Time, `__name__`, job, instance, device ; renommer `Value #A` → Taille, `Value #B` → Disponible, mountpoint → Montage) → *Sort by* Disponible ; unité bytes |
+| 8 | Espace disque utilisé | Bar gauge | horizontal, mode *Gradient*, une barre par `mountpoint`, unité Percent, seuils 75 / 90, exclure les `fstype` tmpfs, overlay et squashfs (matcher `!~`), type Instant |
+| 9 | Systèmes de fichiers | Table | deux requêtes Instant en *Format : Table* (`node_filesystem_size_bytes`, `node_filesystem_avail_bytes`) ; transformations *Join by field* (champ `mountpoint`, mode Outer) → *Organize fields* (masquer les colonnes Time, `__name__`, job, instance, device en double ; renommer `Value #A` → Taille, `Value #B` → Disponible, mountpoint → Montage, `fstype 1` → Type) → *Sort by* Disponible ; unité bytes |
 | 10 | Trafic réseau | Time series | réception en positif, émission en négatif (× −1), unité *bits/sec*, légende `rx {{device}}` / `tx {{device}}`, exclure `lo`, `veth*`, `br*`, `docker*` |
 
 > Vos requêtes :
@@ -403,8 +403,7 @@ Lancez `./lab.sh chaos latency on` pendant quelques minutes pour voir la heatmap
 
 ### Étape 5 — Dashboards as code
 
-16. Bouton *Export* → *Export as code* → *Advanced options* : *Model : Classic*, *Format : JSON*.
-    *Copy to clipboard*.
+16. Bouton *Export* → *Export as code* → *Advanced options* : *Model : Classic*. *Copy to clipboard*.
 17. Enregistrez dans `grafana/dashboards/tp5-boutique.json`. Attendez 10 s, rechargez la liste des
     dashboards : un second « TP 5 » avec un cadenas est apparu. Supprimez ou renommez la version manuelle.
 18. Modifiez un titre de panel dans le JSON. Que se passe-t-il ? Et si vous modifiez le dashboard
