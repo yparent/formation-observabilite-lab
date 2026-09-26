@@ -3,3 +3,8 @@ __pycache__/
 .DS_Store
 .env
 venv/
+node-exporter/textfile/*.prom
+prometheus/targets/*.json
+prometheus/targets/*.yml
+snapshots/
+*.bak

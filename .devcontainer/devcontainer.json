@@ -1,28 +1,39 @@
 {
-  "name": "Observability Lab",
-  "image": "mcr.microsoft.com/devcontainers/python:3-bookworm",
+  "name": "Formation Prometheus & Grafana",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/common-utils:2": {
-      "configureZshAsDefaultShell": true
-    }
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.13" }
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
   },
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-azuretools.vscode-docker",
-        "redhat.vscode-yaml",
-        "tamasfe.even-better-toml" 
-      ]
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "files.eol": "\n"
+      }
     }
   },
-  "forwardPorts": [9090, 3000, 9093, 5000, 9091],
+  "forwardPorts": [9090, 3000, 9093, 8080, 5001, 5002, 9100, 9115, 9091, 9121, 9095],
   "portsAttributes": {
-    "9090": { "label": "Prometheus UI" },
-    "3000": { "label": "Grafana UI" },
-    "5000": { "label": "Python App" },
+    "9090": { "label": "Prometheus" },
+    "3000": { "label": "Grafana" },
     "9093": { "label": "Alertmanager" },
-    "9091": { "label": "Pushgateway" }
+    "8080": { "label": "Inbox notifications" },
+    "5001": { "label": "shop-api-1" },
+    "5002": { "label": "shop-api-2" },
+    "9100": { "label": "Node Exporter" },
+    "9115": { "label": "Blackbox Exporter" },
+    "9091": { "label": "Pushgateway" },
+    "9121": { "label": "Redis Exporter" },
+    "9095": { "label": "Prometheus longue durée" }
   },
-  "postCreateCommand": "apt-get update && apt-get install -y stress iputils-ping && pip install prometheus-client flask"
+  "postCreateCommand": "chmod +x lab.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask",
+  "postStartCommand": "./lab.sh up"
 }

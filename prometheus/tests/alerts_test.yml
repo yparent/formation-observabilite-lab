@@ -1,0 +1,35 @@
+# Tests unitaires de règles — exécutés avec :
+#   docker compose exec prometheus promtool test rules /etc/prometheus/tests/alerts_test.yml
+#
+# On simule des séries dans le temps, puis on vérifie quelles alertes se déclenchent.
+
+rule_files:
+  - ../rules/alerts.yml
+
+evaluation_interval: 15s
+
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'up{job="shop-api", instance="shop-api-1:5000"}'
+        values: "1 1 1 1 0 0 0 0 0 0"    # tombe à 0 après 1 minute
+      - series: 'up{job="shop-api", instance="shop-api-2:5000"}'
+        values: "1 1 1 1 1 1 1 1 1 1"
+
+    alert_rule_test:
+      # Après 1 min de panne, l'alerte n'est pas encore active (for: 1m)
+      - eval_time: 1m15s
+        alertname: TargetDown
+        exp_alerts: []
+
+      # Après 2 min 15, la condition tient depuis plus d'1 min : l'alerte est active
+      - eval_time: 2m15s
+        alertname: TargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: shop-api
+              instance: shop-api-1:5000
+            exp_annotations:
+              summary: "La cible shop-api-1:5000 (job shop-api) ne répond plus"
+              description: "Prometheus n'arrive plus à collecter shop-api-1:5000 depuis plus d'une minute."

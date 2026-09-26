@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Alertmanager — configuration de départ (Jour 3)
+#
+# Vérifier  : docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
+# Recharger : curl -X POST http://localhost:9093/-/reload
+#
+# Toutes les notifications partent vers "inbox", la boîte de réception du lab
+# (http://localhost:8080). Pour un vrai Teams / Slack, voir le TP 7.
+# ---------------------------------------------------------------------------
+
+global:
+  resolve_timeout: 5m
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+route:
+  receiver: inbox-default
+  group_by: ["alertname", "job"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes: []
+    # À compléter pendant le TP 6 : routes par severity, par équipe...
+
+receivers:
+  - name: inbox-default
+    webhook_configs:
+      - url: http://inbox:8080/webhook/default
+        send_resolved: true
+
+inhibit_rules: []

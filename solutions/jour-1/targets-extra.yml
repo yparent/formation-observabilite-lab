@@ -1,0 +1,5 @@
+# CORRIGÉ exercice 1.7 — à déposer dans prometheus/targets/extra.yml
+- targets: ["inbox:8080"]
+  labels:
+    env: formation
+    tier: outils

@@ -1,0 +1,10 @@
+{{/* Modèles de notification personnalisés — utilisés dans le TP 7 (bonus) */}}
+{{ define "formation.title" }}[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}{{ end }}
+
+{{ define "formation.text" }}
+{{ range .Alerts -}}
+{{ .Annotations.summary }}
+Sévérité : {{ .Labels.severity }} | Instance : {{ .Labels.instance }}
+{{ if .Annotations.runbook_url }}Runbook : {{ .Annotations.runbook_url }}{{ end }}
+{{ end }}
+{{ end }}

@@ -1,0 +1,15 @@
+# Fournisseur de dashboards "as code" (Jour 2, TP 5).
+# Tout fichier JSON déposé dans grafana/dashboards/ apparaît dans le dossier "Formation".
+apiVersion: 1
+
+providers:
+  - name: formation
+    orgId: 1
+    folder: Formation
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

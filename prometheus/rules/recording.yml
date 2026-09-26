@@ -1,0 +1,13 @@
+# Règles d'enregistrement (recording rules) — Jour 2, TP 3.
+#
+# Convention de nommage : niveau:metrique:operations
+#   ex. job:http_requests:rate5m  = somme par job du rate 5 min des requêtes
+#
+# Vérifier :  docker compose exec prometheus promtool check rules /etc/prometheus/rules/recording.yml
+# Recharger : curl -X POST http://localhost:9090/-/reload
+
+groups:
+  - name: shop_api_recording
+    interval: 15s
+    rules: []
+      # À compléter pendant le TP 3

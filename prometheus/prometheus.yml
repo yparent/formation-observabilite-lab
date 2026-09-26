@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# Configuration Prometheus du lab
+#
+# Après chaque modification :
+#   1. valider   : docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
+#   2. recharger : curl -X POST http://localhost:9090/-/reload
+# ---------------------------------------------------------------------------
+
+global:
+  scrape_interval: 15s        # fréquence de collecte par défaut
+  evaluation_interval: 15s    # fréquence d'évaluation des règles (recording + alertes)
+  external_labels:
+    cluster: formation
+    replica: prom-1
+
+rule_files:
+  - rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+
+  # Prometheus se surveille lui-même
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # L'application fil rouge (deux instances)
+  - job_name: shop-api
+    static_configs:
+      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+        labels:
+          env: formation
+          team: boutique
+
+  # Métriques de la machine (Jour 1 - TP 1)
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # --- Jour 1 / TP 2 : à compléter par les stagiaires -----------------------
+  # - job "redis"        -> redis-exporter:9121
+  # - job "pushgateway"  -> pushgateway:9091   (honor_labels: true)
+  # - job "blackbox-http" (module http_2xx, relabeling vers blackbox-exporter:9115)
+  # ---------------------------------------------------------------------------

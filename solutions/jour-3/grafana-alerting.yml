@@ -1,0 +1,140 @@
+# CORRIGÉ TP 8 — alerting Grafana "as code"
+# À déposer dans grafana/provisioning/alerting/formation.yml puis : docker compose restart grafana
+#
+# Astuce : dans l'interface, chaque ressource (règle, contact point, policy) a un bouton
+# "Export" qui génère ce YAML. On l'écrit ici à la main pour comprendre la structure.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: inbox-grafana
+    receivers:
+      - uid: inbox-grafana
+        type: webhook
+        settings:
+          url: http://inbox:8080/webhook/grafana
+          httpMethod: POST
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: teams-astreinte
+    receivers:
+      - uid: teams-astreinte
+        type: teams
+        settings:
+          # En vrai : l'URL du flux Workflows "Post to a channel when a webhook request is received"
+          url: http://inbox:8080/teams/grafana
+          title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+          message: '{{ template "default.message" . }}'
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: inbox-grafana
+    group_by: [grafana_folder, alertname]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: teams-astreinte
+        object_matchers:
+          - [severity, =, critical]
+        group_wait: 10s
+        repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: boutique-grafana
+    folder: Formation
+    interval: 1m
+    rules:
+      - uid: grafana-shop-error-rate
+        title: "Boutique - taux d'erreur élevé (Grafana)"
+        condition: C
+        for: 2m
+        labels:
+          severity: critical
+          team: boutique
+          source: grafana
+        annotations:
+          summary: "{{ $labels.instance }} : {{ printf \"%.1f\" (index $values \"B\").Value }} % d'erreurs"
+          description: "Plus de 5 % des requêtes de la boutique échouent depuis 2 minutes."
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              range: false
+              editorMode: code
+              expr: |
+                100 * sum by (instance) (rate(http_requests_total{job="shop-api", status=~"5.."}[5m]))
+                / sum by (instance) (rate(http_requests_total{job="shop-api"}[5m]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [5] }
+
+      - uid: grafana-host-cpu
+        title: "Serveur - CPU élevé (Grafana)"
+        condition: C
+        for: 2m
+        labels:
+          severity: warning
+          team: infra
+          source: grafana
+        annotations:
+          summary: "CPU à {{ printf \"%.0f\" (index $values \"B\").Value }} % sur {{ $labels.instance }}"
+        noDataState: NoData
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              range: false
+              editorMode: code
+              expr: '100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [80] }
+
+muteTimes:
+  - orgId: 1
+    name: nuit
+    time_intervals:
+      # Un intervalle ne peut pas passer minuit : on le coupe en deux (même règle que dans Alertmanager)
+      - times:
+          - start_time: "22:00"
+            end_time: "24:00"
+          - start_time: "00:00"
+            end_time: "07:00"
+        location: Europe/Paris

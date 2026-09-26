@@ -1,0 +1,21 @@
+# Source de données provisionnée : Grafana la crée tout seul au démarrage.
+# (Jour 2, Module 9 : "on ne clique pas pour configurer une datasource")
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s          # doit correspondre au scrape_interval
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 3.15.0
+      cacheLevel: Low
+      incrementalQuerying: true
+      exemplarTraceIdDestinations: []

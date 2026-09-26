@@ -1,0 +1,12 @@
+# Les scripts et fichiers de config gardent des fins de ligne LF, même sur Windows.
+# (un lab.sh en CRLF ne démarre pas dans un conteneur Linux)
+* text=auto eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.pdf binary
+*.pptx binary

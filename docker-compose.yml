@@ -1,0 +1,211 @@
+# ---------------------------------------------------------------------------
+# Formation Prometheus & Grafana — stack complète du lab
+#
+# Démarrage :   docker compose up -d --build
+# Arrêt :       docker compose down            (ajouter -v pour effacer les données)
+# Jour 3 :      docker compose --profile longterm up -d   (Prometheus "longue durée")
+#
+# Versions figées volontairement (septembre 2026) pour que tout le monde ait
+# exactement le même environnement. Voir VERSIONS.md.
+# ---------------------------------------------------------------------------
+
+x-shop-api: &shop-api
+  build: ./apps/shop-api
+  image: formation/shop-api:local
+  restart: unless-stopped
+  networks: [monitoring]
+  depends_on: [redis]
+
+services:
+
+  # ------------------------------------------------------------- Applications
+  shop-api-1:
+    <<: *shop-api
+    container_name: shop-api-1
+    environment:
+      INSTANCE_NAME: shop-api-1
+      REDIS_URL: redis://redis:6379/0
+      PROMETHEUS_DISABLE_CREATED_SERIES: "true"   # évite les séries *_created inutiles
+    ports: ["5001:5000"]
+
+  shop-api-2:
+    <<: *shop-api
+    container_name: shop-api-2
+    environment:
+      INSTANCE_NAME: shop-api-2
+      REDIS_URL: redis://redis:6379/0
+      PROMETHEUS_DISABLE_CREATED_SERIES: "true"
+    ports: ["5002:5000"]
+
+  traffic:
+    build: ./apps/traffic
+    image: formation/traffic:local
+    container_name: traffic
+    restart: unless-stopped
+    environment:
+      TRAFFIC_RPS: "${TRAFFIC_RPS:-6}"
+    networks: [monitoring]
+    depends_on: [shop-api-1, shop-api-2]
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks: [monitoring]
+
+  inbox:
+    build: ./apps/inbox
+    image: formation/inbox:local
+    container_name: inbox
+    restart: unless-stopped
+    ports: ["8080:8080"]
+    networks: [monitoring]
+
+  # ------------------------------------------------------------- Prometheus
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle          # POST /-/reload
+      - --web.enable-admin-api          # snapshots et suppression de séries (Jour 3)
+      - --web.enable-remote-write-receiver
+      - --web.external-url=http://localhost:9090   # pour que les liens des notifications soient cliquables
+    networks: [monitoring]
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    container_name: alertmanager
+    restart: unless-stopped
+    ports: ["9093:9093"]
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+      - alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://localhost:9093
+    networks: [monitoring]
+
+  # ------------------------------------------------------------- Exporters
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    restart: unless-stopped
+    ports: ["9100:9100"]
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ./node-exporter/textfile:/textfile:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/.+)($$|/)
+      - --collector.textfile.directory=/textfile
+    networks: [monitoring]
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    ports: ["9115:9115"]
+    volumes:
+      - ./blackbox:/etc/blackbox_exporter
+    command:
+      - --config.file=/etc/blackbox_exporter/blackbox.yml
+    networks: [monitoring]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.92.0
+    container_name: redis-exporter
+    restart: unless-stopped
+    ports: ["9121:9121"]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    networks: [monitoring]
+    depends_on: [redis]
+
+  pushgateway:
+    image: prom/pushgateway:v1.11.3
+    container_name: pushgateway
+    restart: unless-stopped
+    ports: ["9091:9091"]
+    networks: [monitoring]
+
+  # ------------------------------------------------------------- Grafana
+  grafana:
+    image: grafana/grafana:13.2.1
+    container_name: grafana
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: formation
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-data:/var/lib/grafana
+    networks: [monitoring]
+    depends_on: [prometheus]
+
+  # ------------------------------------------------------------- Profils optionnels
+  # Jour 1 (TP 2) : un batch qui pousse ses métriques dans la Pushgateway
+  batch-job:
+    image: curlimages/curl:8.16.0
+    container_name: batch-job
+    profiles: [batch]
+    volumes:
+      - ./scripts/batch-job.sh:/batch-job.sh:ro
+    entrypoint: ["sh", "/batch-job.sh"]
+    networks: [monitoring]
+
+  # Jour 3 : second Prometheus, cible du remote_write (stockage "longue durée")
+  prometheus-longterm:
+    image: prom/prometheus:v3.15.0
+    container_name: prometheus-longterm
+    profiles: [longterm]
+    ports: ["9095:9090"]
+    volumes:
+      - ./prometheus/longterm.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-longterm-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=90d
+      - --web.enable-remote-write-receiver
+    networks: [monitoring]
+
+  # Optionnel : métriques des conteneurs (fonctionne sur Linux et Docker Desktop)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    container_name: cadvisor
+    profiles: [cadvisor]
+    ports: ["8085:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    name: formation-monitoring
+
+volumes:
+  prometheus-data:
+  prometheus-longterm-data:
+  alertmanager-data:
+  grafana-data:
