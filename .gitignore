@@ -8,3 +8,7 @@ prometheus/targets/*.json
 prometheus/targets/*.yml
 snapshots/
 *.bak
+docs/build/node_modules/
+docs/build/*.html
+docs/build/*.pdf
+docs/build/package*.json
