@@ -6,6 +6,8 @@ const IMG = path.join(__dirname, "..", "formateur", "img");
 const ASSETS = path.join(__dirname, "..", "assets");
 const HERE = __dirname;
 const DIAG = path.join(__dirname, "..", "diagrams");
+const NOTES = require("./notes.js");   // le texte à dire, slide par slide
+const REG = [];
 
 const C = { navy: "0F2A4A", navy2: "163D6B", orange: "F15A22", ink: "1B1F2A", muted: "5B6270", line: "E3E6EB", panel: "F4F5F7", white: "FFFFFF", light: "DBE6F3", peach: "FFB48F", green: "1B7F3B", red: "B3261E" };
 const FONT = "Calibri";
@@ -17,7 +19,7 @@ pres.title = "Formation Prometheus & Grafana";
 let slideNo = 0;
 function base(dark = false) {
   const s = pres.addSlide();
-  slideNo++;
+  slideNo++; s._no = slideNo; REG.push(s);
   s.background = { color: dark ? C.navy : C.white };
   if (!dark) {
     s.addText("Formation Prometheus & Grafana · Yohan Parent", { x: 0.5, y: 5.25, w: 6, h: 0.3, fontFace: FONT, fontSize: 9, color: "9AA3AE", isTextBox: true, margin: 0 });
@@ -26,14 +28,15 @@ function base(dark = false) {
   return s;
 }
 function title(s, t, dark = false, sub) {
+  s._key = t;
   s.addText(t, { x: 0.5, y: 0.35, w: 9, h: 0.7, fontFace: FONT, fontSize: 28, bold: true, color: dark ? C.white : C.navy, isTextBox: true, margin: 0, valign: "middle" });
   if (sub) s.addText(sub, { x: 0.5, y: 1.0, w: 9, h: 0.4, fontFace: FONT, fontSize: 14, color: dark ? C.light : C.muted, italic: true, isTextBox: true, margin: 0 });
 }
-function notes(s, t) { s.addNotes(t); }
+function notes(s, t) { s._note = t; }
 
 // ---- Types de slides ------------------------------------------------------
 function section(label, t, sub, note) {
-  const s = base(true);
+  const s = base(true); s._key = label + " · " + t;
   s.addText(label, { x: 0.7, y: 1.6, w: 8.6, h: 0.4, fontFace: FONT, fontSize: 13, color: C.peach, bold: true, charSpacing: 4, isTextBox: true, margin: 0 });
   s.addText(t, { x: 0.7, y: 2.05, w: 8.6, h: 1.2, fontFace: FONT, fontSize: 40, bold: true, color: C.white, isTextBox: true, margin: 0, valign: "top" });
   if (sub) s.addText(sub, { x: 0.7, y: 3.3, w: 8.6, h: 0.9, fontFace: FONT, fontSize: 18, color: C.light, isTextBox: true, margin: 0 });
@@ -47,7 +50,7 @@ function logoDark(s, x, y, w) {
   s.addImage({ path: path.join(ASSETS, "logo-sparks.png"), x: x + 0.1, y: y + 0.08, w, h: w * 0.4 });
 }
 function statement(t, sub, note) {
-  const s = base(true);
+  const s = base(true); s._key = "[statement] " + t.split("\n")[0].slice(0, 30);
   s.addText(t, { x: 0.8, y: 1.5, w: 8.4, h: 1.8, fontFace: FONT, fontSize: 34, bold: true, color: C.white, isTextBox: true, margin: 0, valign: "middle" });
   if (sub) s.addText(sub, { x: 0.8, y: 3.4, w: 8.4, h: 1.0, fontFace: FONT, fontSize: 18, color: C.peach, isTextBox: true, margin: 0 });
   if (note) notes(s, note);
@@ -128,7 +131,7 @@ function code(t, codeText, explain, opts = {}) {
   return s;
 }
 function tp(num, t, mission, parts, note) {
-  const s = base(true);
+  const s = base(true); s._key = num + " · " + t;
   s.addShape(pres.ShapeType.roundRect, { x: 0.5, y: 0.45, w: 1.5, h: 0.5, fill: { color: C.orange }, line: { color: C.orange }, rectRadius: 0.1 });
   s.addText(num, { x: 0.5, y: 0.45, w: 1.5, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: C.white, align: "center", valign: "middle", isTextBox: true, margin: 0 });
   s.addText(t, { x: 2.2, y: 0.4, w: 7.3, h: 0.6, fontFace: FONT, fontSize: 24, bold: true, color: C.white, isTextBox: true, margin: 0, valign: "middle" });
@@ -189,7 +192,7 @@ function box(s, x, y, w, h, t, fill, color = C.white, size = 12) {
 // OUVERTURE
 // ===========================================================================
 {
-  const s = pres.addSlide(); slideNo++;
+  const s = pres.addSlide(); slideNo++; s._no = slideNo; s._key = "[titre]"; REG.push(s);
   s.background = { path: path.join(HERE, "bg-title.jpg") };
   s.addShape(pres.ShapeType.rect, { x: 0, y: 0, w: 10, h: 5.625, fill: { color: "0A1A30", transparency: 35 }, line: { color: "0A1A30", transparency: 100 } });
   logoDark(s, 0.6, 0.4, 1.8);
@@ -221,6 +224,12 @@ cards("Ce que je vous promets pour mercredi soir", [
   { h: "Comprendre", p: "PromQL comme un réflexe, des tableaux de bord qui répondent à de vraies questions, versionnés dans Git." },
   { h: "Réagir", p: "Diagnostiquer une panne de la boutique en moins de cinq minutes. Et avoir été prévenu par Teams avant le client." },
 ], { note: "La promesse est concrète et mesurable : le war game de mercredi 17h la vérifie." });
+cards("Comment bien suivre ces trois jours", [
+  { n: 1, h: "Posez vos questions", p: "Tout de suite, pas à la pause. Une question que vous vous posez, trois autres personnes se la posent. Il n'y a pas de question bête, il y a des choses que je n'ai pas encore expliquées." },
+  { n: 2, h: "Soyez là", p: "Smartphone dans la poche, notifications coupées, Teams fermé. Trois jours, c'est court, et ce qui se rate le matin manque l'après-midi. On fait une pause toutes les 90 minutes." },
+  { n: 3, h: "Cherchez avant de copier", p: "Les corrigés arrivent après un temps de recherche, jamais avant. Se tromper dans le lab, c'est le but : c'est là qu'on apprend, et ça ne casse rien." },
+  { n: 4, h: "Dites quand ça va trop vite", p: "Ou trop lentement. Levez la main, je ralentis, j'accélère, je refais. Le rythme est le vôtre, pas celui du deck." },
+], { grid: true });
 table("Trois jours, un fil rouge", ["", "Matin", "Après-midi"], [
   ["Jour 1 · Voir", "Observabilité, architecture, Prometheus et Grafana installés à la main, configuration", "Passage aux conteneurs, exporters, Node Exporter (TP 1), instrumentation et services tiers (TP 2)"],
   ["Jour 2 · Comprendre", "PromQL de A à Z, 22 exercices, recording rules et tests (TP 3)", "Grafana 13, dashboard serveur Linux (TP 4), dashboard boutique + as code (TP 5), droits"],
@@ -253,6 +262,18 @@ cards("Un peu d'histoire, vite", [
   { h: "Grafana", p: "Né en 2014, fork de Kibana 3. N'importe quelle source, ne stocke rien. Version 13 depuis avril 2026, on utilise la 13.2." },
 ], { grid: true });
 
+table("Nagios, Zabbix, Datadog… et Prometheus", ["Outil", "Modèle", "Sa force", "Sa limite", "On le choisit quand"], [
+  ["Nagios / Centreon / Icinga", "Checks « OK / WARNING / CRITICAL » lancés par le serveur, plugins", "Simple, robuste, 25 ans de plugins ; Centreon très répandu en France", "Des états, pas des séries : pas de tendance, pas de « pourquoi » ; configuration lourde", "Parc statique, équipes qui l'ont déjà et qui en sont contentes"],
+  ["Zabbix", "Agent (push ou pull), base SQL, templates, alerting et UI intégrés", "Tout-en-un, SNMP et matériel excellents, hôtes, cartes réseau", "Base SQL qui souffre au-delà de quelques millions de valeurs ; modèle « hôte », pas « label »", "Infra classique : serveurs, réseau, baies ; équipes réseau et système"],
+  ["Datadog / Dynatrace / New Relic", "SaaS, un agent, tout intégré (métriques, logs, traces, APM)", "Zéro opération, corrélation prête, IA d'analyse", "Prix par hôte et par volume, données chez un tiers, dépendance forte", "Budget, peu de monde pour opérer, contexte non souverain"],
+  ["Prometheus + Grafana", "Pull HTTP, labels, PromQL, découverte de services, stockage local", "Standard de fait du cloud natif ; dimensionnel ; tout exposé nativement", "Pas d'UI riche seul, pas de long terme ni d'auth intégrés, à opérer", "Kubernetes, conteneurs, microservices, équipes DevOps, souveraineté"],
+], { colW: [1.7, 1.9, 1.9, 1.9, 1.6], size: 9.5, rowH: 0.78 });
+cards("Où se place Prometheus dans l'écosystème CNCF", [
+  { h: "Orchestrer", p: "Kubernetes (2016, premier projet gradué), Helm, Argo CD, Flux. Les cibles bougent tout le temps : c'est pour elles que la découverte de services existe." },
+  { h: "Observer : métriques", p: "Prometheus (2016, deuxième projet, gradué 2018), Thanos et Cortex/Mimir pour le long terme, OpenMetrics pour le format." },
+  { h: "Observer : logs et traces", p: "Fluentd / Fluent Bit et Loki pour les logs, Jaeger et Tempo pour les traces, OpenTelemetry (le projet le plus actif après Kubernetes) pour instrumenter les trois." },
+  { h: "Le pari", p: "Des briques ouvertes, interchangeables, qui parlent le même format. On ne choisit pas un fournisseur, on assemble. Prometheus est le modèle de données autour duquel tout le reste s'est aligné." },
+], { grid: true });
 // Module 2
 section("MODULE 2", "Architecture de Prometheus", "Les composants, le modèle de données, les quatre types de métriques.");
 diagram("Les composants", "composants", "Un journaliste qui fait sa tournée toutes les 15 secondes, un rédacteur en chef, une maquette",
@@ -693,7 +714,7 @@ tp("WAR GAME", "Diagnostiquer en moins de cinq minutes", "Vous ne touchez plus �
   { h: "Action", p: "La première action. Par écrit." },
 ], "12 minutes chrono, par binôme. Puis débrief : qui a trouvé quoi avec quel outil, et ce qui manquait (redis_up, panneau par instance, lien vers les logs).");
 {
-  const s = base(true);
+  const s = base(true); s._key = "Lundi matin";
   s.addText("Lundi matin", { x: 0.7, y: 0.9, w: 8.6, h: 0.7, fontFace: FONT, fontSize: 32, bold: true, color: C.white, isTextBox: true, margin: 0 });
   s.addText("Choisissez un service. Un seul.\nInstrumentez-le en RED. Un dashboard. Deux alertes symptômes. Un runbook.\nPas plus. Le reste viendra.", { x: 0.7, y: 1.7, w: 8.6, h: 1.6, fontFace: FONT, fontSize: 20, color: C.light, isTextBox: true, margin: 0 });
   s.addText("Le dépôt : github.com/yparent/formation-observabilite-lab (branche formation-2026)\nprometheus.io/docs · grafana.com/docs · samber.github.io/awesome-prometheus-alerts · grafana.com/grafana/dashboards", { x: 0.7, y: 3.5, w: 8.6, h: 0.9, fontFace: FONT, fontSize: 12, color: C.peach, isTextBox: true, margin: 0 });
@@ -702,5 +723,14 @@ tp("WAR GAME", "Diagnostiquer en moins de cinq minutes", "Vous ne touchez plus �
   notes(s, "Questionnaire de fin (annexe A), correction à l'oral tout de suite. Rappel du questionnaire de satisfaction Sparks.");
 }
 
+// Notes de présentateur : le texte complet de notes.js, sinon le repère court
+const missing = [];
+for (const s of REG) {
+  const full = NOTES[s._key];
+  if (full) s.addNotes(full.trim() + (s._note ? "\n\n[Repères] " + s._note : ""));
+  else if (s._note) { s.addNotes(s._note); missing.push(s._key); }
+  else missing.push(s._key);
+}
+if (missing.length) console.log("Sans texte complet :", missing.length, missing.join(" | "));
 const out = path.join(HERE, "Formation-Prometheus-Grafana.pptx");
 pres.writeFile({ fileName: out }).then(() => console.log("écrit :", out, "·", slideNo, "slides"));

@@ -45,7 +45,22 @@ Ce que je promets pour mercredi soir : « vous saurez diagnostiquer une panne de
 moins de cinq minutes, et vous aurez été prévenus par Teams avant que le client ne râle ».
 
 Logistique : horaires, pauses, le dépôt GitHub, le guide stagiaire du jour (je ne donne que le
-jour 1), et la règle : on cherche d'abord, je corrige ensuite.
+jour 1).
+
+**Comment bien suivre ces trois jours** (une minute, sur un ton léger, mais je le dis vraiment) :
+1. Posez vos questions tout de suite, pas à la pause : une question que vous vous posez, trois
+   autres personnes se la posent. Il n'y a pas de question bête, il y a des choses que je n'ai
+   pas encore expliquées.
+2. Soyez là : téléphone dans la poche, notifications coupées, Teams fermé. Trois jours c'est
+   court, ce qui se rate à 10h manque à 15h. En échange, une pause toutes les 90 minutes et je ne
+   déborde pas.
+3. Cherchez avant de copier : les corrigés arrivent après un temps de recherche, jamais avant.
+   Se tromper dans le lab, c'est le but, et ça ne casse rien.
+4. Dites-moi quand ça va trop vite, ou trop lentement. Le rythme est le vôtre, pas celui du deck.
+
+> **Anecdote — les deux jours de silence.** Une session où personne n'a rien dit pendant deux
+> jours. Le troisième matin, j'ai découvert que la moitié de la salle était perdue depuis le
+> module 4. Depuis, je préfère être interrompu.
 
 **Ce que je montre.** Grafana avec le dashboard *TP 5 - Boutique en ligne* du corrigé, tout vert.
 Puis `./lab.sh chaos errors on`, et je laisse tourner en arrière-plan : à la pause, le dashboard
@@ -114,6 +129,42 @@ source en 2015. Deuxième projet accueilli par la CNCF en 2016 après Kubernetes
 en 2018. Aujourd'hui, c'est le standard de fait : Kubernetes, Docker, la plupart des bases de
 données et des middlewares exposent nativement du format Prometheus. Version 3 sortie fin 2024 ;
 on travaille sur la 3.13, la branche LTS du moment. J'explique pourquoi au module 3.
+
+**Nagios, Zabbix, Datadog... et Prometheus.** C'est la question que tout le monde a en tête :
+« on a déjà un outil, pourquoi Prometheus ? ». Je m'appuie sur ce qu'ils ont dit au tour de table.
+
+| Outil | Modèle | Sa force | Sa limite | On le choisit quand |
+|---|---|---|---|---|
+| Nagios, Centreon, Icinga | Des checks OK / WARNING / CRITICAL lancés par le serveur, des plugins | Simple, robuste, 25 ans de plugins ; Centreon très répandu en France | Des états, pas des séries : pas de tendance, pas de « pourquoi » ; configuration lourde par hôte | Parc statique, équipe qui l'a déjà et en est contente |
+| Zabbix | Agent (push ou pull), base SQL, templates, alerting et UI intégrés | Tout-en-un, excellent en SNMP et sur le matériel (baies, switches, onduleurs) | Modèle « un hôte a des items », pas « une série a des labels » ; la base SQL souffre au-delà de quelques millions de valeurs | Infra classique, serveurs et réseau, équipes système et réseau |
+| Datadog, Dynatrace, New Relic | SaaS, un agent, tout intégré : métriques, logs, traces, APM | Zéro opération, corrélation prête, analyse automatique | Prix par hôte et par volume, données chez un tiers, dépendance forte | Budget, peu de monde pour opérer, contexte non souverain |
+| Prometheus + Grafana | Pull HTTP, labels, PromQL, découverte de services, stockage local | Standard de fait du cloud natif, dimensionnel, tout l'expose nativement | Seul : pas d'UI riche (Grafana), pas de long terme (Thanos, Mimir), pas d'auth (reverse proxy) ; à opérer | Kubernetes, conteneurs, microservices, équipes DevOps, souveraineté |
+
+Ma règle : Kubernetes, conteneurs, microservices, une équipe DevOps ou une exigence de
+souveraineté, c'est Prometheus. Un parc de serveurs et de réseau stable avec une équipe système,
+Zabbix ou Centreon font le travail, et Prometheus vient à côté pour les applications ; je ne
+remplace jamais un Zabbix qui marche. Pas de monde, pas de compétence, un budget : le SaaS.
+Prometheus n'est pas mieux dans l'absolu, il est mieux dans son contexte, et son contexte est
+devenu la norme : les cibles qui apparaissent et disparaissent toutes les minutes, Nagios et
+Zabbix ne savent pas les suivre.
+
+> **Anecdote — le doublon qui n'en était pas un.** Un client avait Centreon pour l'infra et
+> Prometheus pour Kubernetes, et a mis six mois à accepter que ce n'était pas un doublon mais deux
+> outils pour deux mondes. Aujourd'hui les deux tournent, et leurs alertes arrivent dans le même
+> Alertmanager.
+
+**L'écosystème CNCF.** La Cloud Native Computing Foundation, créée en 2015 autour de Kubernetes,
+héberge des centaines de projets avec un pari constant : des briques ouvertes, interchangeables,
+qui parlent le même format ; on ne choisit pas un fournisseur, on assemble. Pour orchestrer :
+Kubernetes (premier projet gradué), Helm, Argo CD, Flux ; dans ce monde les cibles bougent tout
+le temps, c'est pour ça que la découverte de services est au cœur de Prometheus. Pour observer
+les métriques : Prometheus (deuxième projet, gradué 2018), Thanos et Cortex, devenu Mimir, pour
+le long terme, OpenMetrics pour le format. Pour les logs et les traces : Fluentd et Fluent Bit,
+Loki, Jaeger, Tempo, et OpenTelemetry, le projet le plus actif après Kubernetes, qui instrumente
+les trois signaux et que Prometheus 3 reçoit nativement. Prometheus n'est pas un outil isolé,
+c'est le modèle de données autour duquel tout l'écosystème s'est aligné. Grafana n'est pas un
+projet CNCF, c'est une entreprise, mais elle contribue à la plupart de ces projets et son produit
+les affiche tous.
 
 **Grafana** est né en 2014 comme un fork de Kibana 3, avec une idée : afficher des séries
 temporelles de n'importe quelle source. Il ne stocke rien et ne collecte rien : il interroge
