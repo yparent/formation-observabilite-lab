@@ -160,6 +160,119 @@ Chaque module a la même structure :
 - **Exercices** ou **TP** : l'énoncé tel qu'il figure dans le guide stagiaire, puis le corrigé
   détaillé, les erreurs classiques et ce que je vérifie chez les stagiaires
 - **Points de vigilance** : ce qui coince en général
+- **Pas à pas** (encadrés bleu marine) : les manipulations exactes, commande par commande et clic
+  par clic, sur mon Mac ou dans mes Codespaces, au moment où elles se font
 
 Les encadrés « Anecdote » sont mes retours d'expérience. Je les raconte à ma façon, ce ne sont pas
 des textes à lire.
+
+
+## La veille et le matin : mes manipulations
+
+Convention pour tout le guide : **[Mac]** = mon Mac ; **[CS-stagiaire]** = mon Codespace sur la branche `formation-2026`, que je déroule au même rythme que la salle ; **[CS-démo]** = mon Codespace sur `formation-2026-formateur`, toutes briques chaudes, pour les démonstrations et les corrigés. Les blocs « Pas à pas » qui jalonnent les trois journées sont à suivre à la lettre.
+
+### 0.1 Vérifier que GitHub est à jour [Mac]
+
+1. Ouvrir Safari sur https://github.com/yparent/formation-observabilite-lab/branches : les deux
+   branches `formation-2026` et `formation-2026-formateur` doivent avoir un commit d'aujourd'hui ou
+   d'hier. Sinon, pousser depuis le dossier `2026/formation-observabilite-lab` (commande dans
+   `LISEZ-MOI-avant-mardi.md`).
+2. Ouvrir https://github.com/yparent/formation-observabilite-lab/tree/formation-2026 : je dois voir
+   `compose/`, `install/`, `thanos/`, `docs/stagiaire/`, et **pas** `solutions/`.
+
+### 0.2 Créer le Codespace démo [Mac, navigateur]
+
+1. Sur la page du dépôt, menu déroulant des branches (en haut à gauche, « main ») → choisir
+   `formation-2026-formateur`.
+2. Bouton vert **Code** → onglet **Codespaces** → les trois points **···** → **New with options…**
+3. Branch : `formation-2026-formateur`. Region : Europe West. Machine type : **4-core** (le
+   démo porte les huit briques). **Create codespace**.
+4. Attendre 2 à 3 minutes : VS Code s'ouvre dans le navigateur, le terminal affiche
+   l'installation de Docker, Python et jq (`postCreateCommand`). Quand le prompt revient :
+
+```bash
+./lab.sh up          # doit refuser : "Aucune brique activée"
+```
+
+5. Renommer le Codespace pour s'y retrouver : https://github.com/codespaces → à côté du
+   Codespace, **···** → **Rename** → `demo-formateur`.
+
+### 0.3 Préparer la stack démo [CS-démo]
+
+Dans le terminal du Codespace (menu **Terminal → New Terminal**, ou Ctrl+ù) :
+
+```bash
+# activer les six briques des jours 1 et 3 (pas Thanos, pas cAdvisor)
+sed -i 's|^  # - compose/0[1-6]|  - compose/0X|' docker-compose.yml
+sed -i 's|0X-prometheus|01-prometheus|; s|0X-grafana|02-grafana|; s|0X-shop|03-shop|; s|0X-node|04-node|; s|0X-exporters|05-exporters|; s|0X-alerting|06-alerting|' docker-compose.yml
+grep -n "^  - compose" docker-compose.yml        # six lignes attendues
+
+# les corrigés, pour que tout tourne comme en fin de jour 3
+cp solutions/jour-1/prometheus.yml prometheus/prometheus.yml
+cp solutions/jour-1/targets/pushgateway.yml prometheus/targets/
+cp solutions/jour-1/app.py apps/shop-api/app.py
+cp solutions/jour-2/recording.yml prometheus/rules/recording.yml
+cp solutions/jour-2/recording_test.yml prometheus/tests/
+cp solutions/jour-2/dashboards/*.json grafana/dashboards/
+cp solutions/jour-3/alerts.yml prometheus/rules/alerts.yml
+cp solutions/jour-3/alertmanager.yml alertmanager/alertmanager.yml
+cp solutions/jour-3/grafana-alerting.yml grafana/provisioning/alerting/formation.yml
+sed -i 's|^# alerting:|alerting:|; s|^#   alertmanagers:|  alertmanagers:|; s|^#     - static_configs:|    - static_configs:|; s|^#         - targets: \["alertmanager:9093"\]|        - targets: ["alertmanager:9093"]|' prometheus/prometheus.yml
+
+./lab.sh up                                       # première fois : 2 à 4 minutes (build des images)
+sleep 40 && ./lab.sh status && ./lab.sh check && ./lab.sh test
+```
+
+Si `./lab.sh up` échoue avec `toomanyrequests` : `docker login` (compte Docker Hub gratuit), puis
+relancer.
+
+Vérifier dans le navigateur : onglet **PORTS** (à côté de TERMINAL, en bas) → ligne 9090 → icône
+**globe** (Open in Browser). Prometheus s'ouvre dans un nouvel onglet, Status → Target health :
+six jobs UP. Même chose pour 3000 (Grafana, `admin` / `formation` : trois dashboards dont
+*TP 5 - Boutique en ligne*), 9093, 8080.
+
+Laisser tourner 20 minutes pour avoir de l'historique, puis **arrêter le Codespace** pour ne
+pas consommer le quota : https://github.com/codespaces → **···** → **Stop codespace**. Les
+volumes Docker sont conservés ; demain matin, `./lab.sh up` repart avec l'historique.
+
+### 0.4 Créer le Codespace stagiaire [Mac, navigateur]
+
+Même manipulation qu'en 0.2 avec la branche `formation-2026`, machine **2-core**, renommé
+`stagiaire`. Ne rien lancer dedans : je le déroule en direct avec la salle.
+
+### 0.5 Le deck [Mac]
+
+1. Ouvrir `2026/Formation-Prometheus-Grafana.pptx` dans PowerPoint.
+2. **Diaporama → Configurer le diaporama** : vérifier que le mode Présentateur est coché
+   (l'écran projeté montre la slide, mon écran montre la slide suivante et **les notes**, qui
+   contiennent tout le texte à dire).
+3. Tester une fois avec le vidéoprojecteur : Diaporama → **À partir du début**, puis vérifier que
+   les notes sont sur mon écran. Si les écrans sont inversés : **Diaporama → Mode Présentateur →
+   Permuter l'affichage**.
+4. Police des notes trop petite ? Dans le mode Présentateur, les boutons **A+ / A−** sous les notes.
+
+### 0.6 Mes onglets Safari, dans l'ordre
+
+1. Le deck n'est pas dans Safari, il est dans PowerPoint (Cmd+Tab pour basculer).
+2. Onglet 1 : Codespace `stagiaire` (VS Code).
+3. Onglet 2 : Codespace `demo-formateur` (VS Code).
+4. Onglets 3 à 6 : Prometheus, Grafana, Alertmanager, Inbox du démo (ouverts depuis l'onglet PORTS).
+5. Onglet 7 : le guide formateur en PDF, chapitre du jour.
+
+Les URLs des Codespaces ressemblent à `https://<nom>-<hash>-9090.app.github.dev` : je ne les
+retape jamais, je passe par l'onglet PORTS. Elles demandent une connexion GitHub à la première
+ouverture, c'est normal.
+
+### 0.7 Ce que je vérifie à 8h30 le mardi
+
+```bash
+# [CS-démo] : relancer la stack, elle a l'historique d'hier
+./lab.sh up && sleep 40 && ./lab.sh status
+./lab.sh chaos reset
+```
+
+Les quatre onglets du démo répondent. Le dashboard *TP 5 - Boutique en ligne* est vert. Le deck
+est ouvert sur la slide 1. Le Codespace `stagiaire` est démarré mais vide.
+
+---
+

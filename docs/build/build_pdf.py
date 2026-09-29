@@ -41,6 +41,8 @@ main h1::after, .toc-page h1::after { content: ""; display: block; width: 28mm; 
 h2 { font-size: 15pt; font-weight: 700; color: var(--navy); margin: 8mm 0 3mm; break-after: avoid; line-height: 1.2; }
 h3 { font-size: 11.8pt; font-weight: 600; color: var(--ink); margin: 6mm 0 2mm; break-after: avoid; }
 h4 { font-size: 10.5pt; font-weight: 600; margin: 4mm 0 1.5mm; break-after: avoid; }
+h3.pap { background: var(--navy); color: #fff; padding: 1.6mm 3mm; border-radius: 1.2mm; margin-top: 7mm; }
+h3.pap::before { content: "⌨  "; }
 p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
 ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
 li { margin-bottom: 1mm; }
@@ -190,6 +192,7 @@ def make_toc(items, pages=None) -> str:
 
 
 def postprocess(html: str) -> str:
+    html = re.sub(r'<h3([^>]*)>Pas à pas', r'<h3\1 class="pap">Pas à pas', html)
     html = re.sub(r'(<h[1-6]) id="([^"]+)"', r'\1 id="h-\2"', html)
     # marqueur invisible (mais extractible) pour retrouver la page de chaque titre h1/h2
     counter = [0]

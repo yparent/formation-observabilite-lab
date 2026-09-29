@@ -196,3 +196,19 @@ en décommentant sa ligne `include` dans `docker-compose.yml`, puis `./lab.sh up
 Limites : pas de mise en forme personnalisée de la carte depuis Grafana (titre et message
 seulement) ; les flux Workflows sont soumis aux limites Power Automate du tenant (nombre d'appels
 par jour selon la licence) ; un flux appartient à un utilisateur, prévoir un compte de service.
+
+## Annexe F — Quand ça coince en salle (Codespaces, Mac)
+
+| Symptôme | Ce que je fais |
+|---|---|
+| Le Codespace ne s'ouvre pas, page grise | Recharger l'onglet (Cmd+R). Sinon https://github.com/codespaces → ··· → **Open in browser**. En dernier recours ··· → **Rebuild container** (5 min, les volumes Docker survivent) |
+| Le terminal dit `Cannot connect to the Docker daemon` | Attendre 30 s après l'ouverture du Codespace ; sinon `sudo service docker start` |
+| `./lab.sh up` : `toomanyrequests` | `docker login` avec un compte Docker Hub gratuit, relancer |
+| `./lab.sh up` : `port is already allocated` | Un binaire du matin tourne encore : Ctrl+C dans son terminal, ou `pkill -x prometheus ; pkill -x grafana` |
+| Un port n'apparaît pas dans PORTS | Onglet PORTS → **Forward a Port** → taper le numéro |
+| L'URL d'un port affiche une page GitHub « You don't have access » | Mauvais compte GitHub dans le navigateur, ou visibilité du port : PORTS → clic droit → Port Visibility → Private |
+| Grafana affiche « Invalid language tag » ou une page blanche | Navigateur en français avec un réglage exotique ; rafraîchir, ou Safari → Réglages → Langue |
+| Le Codespace s'est arrêté pendant la pause | Recharger l'onglet, attendre 30 s, `./lab.sh up` : tout repart avec l'historique |
+| Un stagiaire a tout cassé | `git stash` puis `git pull` dans son Codespace remet les fichiers du dépôt ; les volumes restent. `./lab.sh reset` seulement en dernier recours |
+| Le quota Codespaces d'un stagiaire est épuisé | Il travaille en binôme sur le Codespace du voisin (chacun sa fenêtre, même URL partagée via PORTS → Port Visibility → Public) |
+| PowerPoint : les notes ne s'affichent pas sur mon écran | Diaporama → Mode Présentateur ; si un seul écran est détecté, Diaporama → Configurer le diaporama → « Présenté par un présentateur » et **Permuter l'affichage** |

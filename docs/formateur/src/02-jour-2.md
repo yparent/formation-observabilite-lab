@@ -37,6 +37,15 @@ corrigé et ils complètent. Cinq minutes maximum, on a du PromQL à faire.
 Je vérifie que chacun a au moins une heure d'historique ; sinon, rien de grave, les fenêtres
 `[5m]` fonctionneront quand même.
 
+
+### Pas à pas — rappel
+
+```bash
+./lab.sh up && sleep 30 && ./lab.sh status
+```
+
+Target health : six jobs UP. PORTS → 5001 → `/metrics` : `shop_orders_total` présent.
+
 ---
 
 ## Module 7 — PromQL, les fondations (40 min)
@@ -116,6 +125,18 @@ Je montre aussi la différence Table/Graph : Table = instant vector à l'instant
 la même requête évaluée à chaque pas de temps (c'est ce que fait Grafana avec `query_range`).
 
 ![L'onglet Graph de Prometheus 3 : débit par route](../img/prometheus-graph.png)
+
+
+### Pas à pas — démonstrations PromQL
+
+Toutes les démos dans l'onglet Prometheus, Query. Pour les séries A et B, je projette le
+corrigé (chapitre Jour 2) deux exercices à la fois, en tapant la requête moi-même dans Prometheus.
+
+Démo rate contre irate : `./lab.sh traffic 30`, puis `rate(http_requests_total[1m])` et
+`irate(http_requests_total[1m])` en Graph, plage 15 min. Remettre `./lab.sh traffic 10`.
+
+Exercice 2.14 : `./lab.sh chaos errors on`, cinq minutes, puis **off**. Vérifier à 12h30 que
+personne n'a laissé le chaos actif : `./lab.sh chaos status`.
 
 ---
 
@@ -429,6 +450,20 @@ de `histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seco
 et de `route:http_request_duration_seconds:p95_5m`. Sur notre petit lab, la différence est de
 quelques millisecondes ; en production avec des milliers de séries, c'est des secondes.
 
+
+### Pas à pas — TP 3
+
+Créer `prometheus/rules/recording.yml` (le fichier existe, vide de règles) avec les sept règles.
+Créer `prometheus/tests/recording_test.yml`.
+
+```bash
+docker compose exec prometheus promtool check rules /etc/prometheus/rules/recording.yml
+./lab.sh reload
+./lab.sh test
+```
+
+Requête `job:http_requests:rate5m` : des séries.
+
 ---
 
 ## Module 9 — Grafana (35 min)
@@ -533,6 +568,16 @@ Une visite de Grafana 13 en cinq minutes, en projetant :
 ![Grafana 13 : un nouveau dashboard et sa barre latérale d'édition](../img/grafana-nouveau-dashboard.png)
 
 ![Grafana 13 : l'éditeur de panel (requêtes en bas, visualisation et options à droite)](../img/grafana-editeur-panel.png)
+
+
+### Pas à pas — visite guidée de Grafana
+
+Onglet Grafana du démo. Menu : Connections → Data sources. Explore. Dashboards → **New →
+New dashboard** : la barre latérale **Add** (Panel, Add row, Add tab, Variable, Annotation
+query, Link), le choix Custom grid / Auto grid. **Add → Panel** : la requête en bas, Suggestions
+à droite, All visualizations, les options. **Save dashboard** en haut à droite, titre `Démo`,
+dossier *Formation*. Puis **Exit edit**. Ouvrir *TP 5 - Boutique en ligne* : le cadenas
+(provisionné).
 
 ---
 
@@ -669,6 +714,17 @@ green*.
 titre (le TP 5 y fera un lien). Que la variable fonctionne avec `=~`. Les rapides ajoutent un
 panel « Processus » (`node_processes_state`, pie chart) ou passent le dashboard en *Auto grid*
 pour comparer.
+
+
+### Pas à pas — TP 4
+
+Grafana → Dashboards → New → New dashboard. **Settings** (icône engrenage) → **Variables →
+New variable** : Name `instance`, Type Query, Data source Prometheus, Query
+`label_values(node_uname_info, instance)`, cocher **Multi-value** et **Include All option**,
+**Run query**, **Back to dashboard**. Puis les panels, étape par étape (chapitre Jour 2, TP 4) ;
+dans chaque requête, `instance=~"$instance"`. Save → titre `TP 4 - Serveur Linux`, dossier
+*Formation*. Le résultat attendu est la slide « TP 4 — le résultat attendu », que je laisse
+projetée.
 
 ---
 
@@ -807,6 +863,22 @@ Git Sync (Grafana 13, *Administration → Provisioning*) va plus loin : Grafana 
 dashboards directement dans un dépôt GitHub/GitLab, avec pull request. Je le montre en
 capture d'écran seulement (il faut un dépôt et un token).
 
+
+### Pas à pas — TP 5
+
+Même mécanique, chapitre Jour 2, TP 5. Étape 4, annotation : Settings → **Annotations → New
+annotation query**, Data source Prometheus, Query `changes(shop_chaos_mode[1m]) > 0`. Étape 5 :
+**Export** (en haut à droite) → **Export as code** → Advanced options → Model **Classic**, Format
+JSON → **Download file**. Le fichier arrive dans les téléchargements du Mac ; dans VS Code,
+glisser-déposer le fichier sur le dossier `grafana/dashboards` de l'explorateur (ou créer
+`tp5-boutique.json` et coller le contenu). Puis :
+
+```bash
+docker compose restart grafana
+```
+
+Dashboards : *TP 5* avec un cadenas.
+
 ---
 
 ## Module 10 — Provisioning, utilisateurs, droits, éditions (30 min)
@@ -919,6 +991,15 @@ L'annotation apparaît sur tous les dashboards dont la source d'annotations int�
 de quelques lignes dans le pipeline. Remarque : l'API historique `/api/...` reste fonctionnelle en 13 mais Grafana
 la fait progressivement migrer vers `/apis/...` (API à la Kubernetes) ; pour les scripts, les
 deux marchent aujourd'hui.
+
+
+### Pas à pas — module 10
+
+Administration → Users and access → Users, Teams, Service accounts. Dashboards → dossier
+*Formation* → **Folder actions → Manage permissions**. Les exercices 2.30 à 2.33 se font dans
+le stagiaire, en autonomie.
+
+---
 
 ---
 

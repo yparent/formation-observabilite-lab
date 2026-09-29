@@ -54,6 +54,18 @@ voit avec `prometheus_notifications_sent_total` qui reste à zéro.
 **Ce que je vérifie.** Tout le monde a une cible sur la page *Alertmanager discovery*. Ceux qui
 ont oublié le reload voient la page vide.
 
+
+### Pas à pas — rappel et exercice 3.0
+
+```bash
+./lab.sh up && sleep 30 && ./lab.sh status
+```
+
+`docker-compose.yml` : décommenter `- compose/06-alerting.yml`, `./lab.sh up`. PORTS → 9093 et
+8080 → globe. `prometheus/prometheus.yml` : retirer les `# ` devant les quatre lignes du bloc
+`alerting`. `./lab.sh check && ./lab.sh reload`. Prometheus → Status → **Alertmanager discovery** :
+une cible.
+
 ---
 
 ## Module 11 — Philosophie de l'alerting et règles Prometheus (25 min)
@@ -125,6 +137,17 @@ au TP 3. Et en conditions réelles avec le chaos.
 Dans Prometheus, **Alerts** : la règle `TargetDown` déjà présente. J'arrête `shop-api-2`,
 on regarde passer *pending* puis *firing* au bout d'une minute, la notification arrive dans
 l'Inbox. Je redémarre, *resolved* arrive.
+
+
+### Pas à pas — démonstration du module 11
+
+```bash
+docker compose stop shop-api-2
+```
+
+Prometheus → **Alerts** : `TargetDown` pending, puis firing après une minute. Alertmanager
+(9093) : l'alerte. Inbox (8080) : la notification. Puis `docker compose start shop-api-2` :
+resolved deux minutes plus tard.
 
 ---
 
@@ -206,6 +229,15 @@ JSON.
   `docker compose exec alertmanager amtool config routes show --config.file=/etc/alertmanager/alertmanager.yml`
   (l'arbre en ASCII) et `... amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml severity=critical team=boutique`
   (« vers quel receiver ? »). Le `--config.file` est obligatoire pour ces deux commandes.
+
+
+### Pas à pas — démonstration du module 12
+
+```bash
+docker compose exec alertmanager amtool config routes show --config.file=/etc/alertmanager/alertmanager.yml
+docker compose exec alertmanager amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml severity=critical team=boutique
+docker compose exec alertmanager amtool alert
+```
 
 ---
 
@@ -314,6 +346,33 @@ IANA, et le conteneur doit avoir la base tzdata (l'image officielle l'a).
 
 **Ce que je vérifie.** `./lab.sh check` passe chez tout le monde, l'Inbox a reçu au moins un
 message Teams et un message Slack, et le chaos est off.
+
+
+### Pas à pas — TP 6
+
+Partie 1 : éditer `prometheus/rules/alerts.yml`, les cinq alertes (corrigé : `solutions/jour-3/alerts.yml`
+dans le démo).
+
+```bash
+docker compose exec prometheus promtool check rules /etc/prometheus/rules/alerts.yml
+./lab.sh test && ./lab.sh reload
+```
+
+Partie 2 : `./lab.sh chaos errors on`, chronomètre, Prometheus → Alerts, Inbox. `./lab.sh chaos
+errors off`. Partie 3 : `alertmanager/alertmanager.yml`,
+
+```bash
+docker compose exec alertmanager amtool check-config /etc/alertmanager/alertmanager.yml
+curl -X POST localhost:9093/-/reload
+docker compose exec alertmanager amtool config routes test --config.file=/etc/alertmanager/alertmanager.yml severity=critical team=boutique
+```
+
+Partie 5, silence par amtool :
+
+```bash
+docker compose exec alertmanager amtool silence add alertname=ShopStockLow -d 1h -c "réassort en cours"
+docker compose exec alertmanager amtool silence query
+```
 
 ---
 
@@ -527,6 +586,27 @@ curl -X POST http://localhost:9093/api/v2/alerts -H 'Content-Type: application/j
 **Ce que je vérifie.** Chacun a une carte Teams (ou Inbox `teams`) qui contient sa `summary` et le
 lien dashboard.
 
+
+### Pas à pas — TP 7
+
+Règle dans `alerts.yml`, route dans `alertmanager.yml`, puis :
+
+```bash
+./lab.sh chaos cpu 300
+```
+
+Test sans attendre :
+
+```bash
+curl -X POST localhost:9093/api/v2/alerts -H 'Content-Type: application/json' -d '[{"labels":{"alertname":"HostHighCpuLoad","severity":"warning","team":"infra","instance":"node-exporter:9100"},"annotations":{"summary":"CPU à 92 % sur node-exporter:9100"}}]'
+```
+
+Partie 4, rendu du template :
+
+```bash
+docker compose exec alertmanager amtool template render --template.glob='/etc/alertmanager/templates/*.tmpl' --template.text='{{ template "formation.text" . }}'
+```
+
 ---
 
 ## Module 14 — Alerting Grafana (25 min)
@@ -667,6 +747,24 @@ provisionné. Et le fameux intervalle qui passe minuit : un fichier invalide **e
 démarrer** (il redémarre en boucle, `docker compose logs grafana` montre `failure to parse file`).
 C'est plus brutal qu'Alertmanager, qui garde l'ancienne config.
 
+
+### Pas à pas — module 14 et TP 8
+
+Grafana → **Alerting → Contact points → Create contact point** : Name `inbox-grafana`,
+Integration **Webhook**, URL `http://inbox:8080/webhook/grafana`, **Test** → Send test
+notification, **Save contact point**. Second : `teams-astreinte`, Integration **Microsoft
+Teams**, URL `http://inbox:8080/teams/grafana` (ou la vraie URL Workflows).
+
+**Alerting → Notification policies** : sur *Default policy*, **···** → Edit → Contact point
+`inbox-grafana`, Update. Puis **New child policy** : Label `severity`, Operator `=`, Value
+`critical`, Contact point `teams-astreinte`, Override group timings → Group wait `10s`, Save.
+
+**Alerting → Alert rules → New alert rule** : les six étapes du chapitre Jour 3, TP 8.
+Partie 4 : sur la règle, **···** → **Export** → format YAML → copier dans
+`grafana/provisioning/alerting/formation.yml` (fichier à créer), même chose pour les contact
+points (**Contact points → ··· → Export**). Puis `docker compose restart grafana`. Si Grafana ne
+redémarre pas : `docker compose logs grafana | tail -20`, le fichier YAML est en cause.
+
 ---
 
 ## Module 15 — Performances, limites, bonnes pratiques (25 min, exercices compris)
@@ -756,6 +854,12 @@ recording rule avec `?stats=all` :
 *`totalQueryableSamples` et `timings.execTotalTime` : la brute lit des milliers d'échantillons, la
 recording rule quelques dizaines.*
 
+
+### Pas à pas — exercices du module 15
+
+Prometheus → Status → TSDB status. Exercice 3.4 : `sample_limit: 100` sous `job_name: redis`,
+check, reload, `up{job="redis"}` : 0. Retirer, reload.
+
 ---
 
 ## TP 9 — Sauvegarde, restauration, sécurité (30 min)
@@ -835,6 +939,29 @@ sidecar Thanos du TP 10 si on le laissait en place (`--prometheus.http-client` a
 identifiants). Alertmanager ne parle pas à Prometheus, donc rien de ce côté. Leçon : la sécurité
 se fait au début, pas à la fin. On **retire** le `web.config.file` à la fin du TP : le TP 10 et le
 war game se font sans mot de passe.
+
+
+### Pas à pas — TP 9
+
+```bash
+./lab.sh snapshot
+docker compose exec prometheus ls /prometheus/snapshots/
+```
+
+Restauration : les quatre commandes du chapitre Jour 3, TP 9 partie 1 (copier-coller, en
+remplaçant `SNAP=`). Partie 2 :
+
+```bash
+docker compose cp grafana:/var/lib/grafana/grafana.db ./grafana-backup.db
+mkdir -p backup && for uid in $(curl -s -u admin:formation 'http://localhost:3000/api/search?type=dash-db' | jq -r '.[].uid'); do curl -s -u admin:formation "http://localhost:3000/api/dashboards/uid/$uid" | jq .dashboard > "backup/$uid.json"; done
+ls backup/
+```
+
+Partie 3 : créer `prometheus/web.yml` (corrigé `solutions/jour-3/web.yml`), ajouter
+`- --web.config.file=/etc/prometheus/web.yml` dans `compose/01-prometheus.yml`,
+`docker compose up -d prometheus`. Prometheus demande un mot de passe. Grafana → Data sources →
+Prometheus : Authentication **Basic authentication**, `admin` / `formation`, Save & test.
+**Retirer** le flag à la fin : `docker compose up -d prometheus`.
 
 ---
 
@@ -1032,6 +1159,42 @@ lire la TSDB, ou pour du multi-tenant), *Ruler* (évaluer des règles globales s
 Mimir et VictoriaMetrics résolvent le même problème en remplaçant le stockage local des Prometheus
 plutôt qu'en le complétant ; le choix dépend surtout de ce que l'équipe sait opérer.
 
+
+### Pas à pas — TP 10
+
+`compose/01-prometheus.yml` : retirer le `# ` devant les deux lignes
+`--storage.tsdb.min-block-duration=10m` et `max-block-duration=10m`. `docker-compose.yml` :
+décommenter `- compose/07-thanos.yml`.
+
+```bash
+./lab.sh up && sleep 30 && ./lab.sh status     # dix-huit conteneurs Up ; noter l'heure
+docker compose logs thanos-sidecar-a | tail -5  # pas d'erreur "Compaction needs to be disabled"
+```
+
+PORTS → 10902 → globe : le Querier. Menu **Stores**. Query : `up{job="shop-api"}` ; décocher
+**Use Deduplication** en haut de la page, ré-exécuter. `count by (replica) (up)`.
+
+```bash
+docker compose stop prometheus-b     # le Querier répond toujours
+docker compose start prometheus-b
+```
+
+Grafana → Connections → Data sources → **Add new data source** → Prometheus : Name `Thanos`,
+URL `http://thanos-query:10902`, section **Performance → Prometheus type : Thanos**, Save & test.
+Dashboard *TP 5* → Settings → changer la source par défaut, ou une variable Data source.
+
+Quinze minutes après le lancement :
+
+```bash
+docker compose exec thanos-store ls -la /bucket
+docker compose exec thanos-store sh -c 'cat /bucket/*/meta.json | head -40'
+docker compose exec thanos-sidecar-a wget -qO- localhost:10902/metrics | grep thanos_shipper_uploads
+docker compose logs thanos-compact | tail -20
+```
+
+Ranger : recommenter la brique 07 et les deux flags, `./lab.sh up`, `./lab.sh status` : douze
+conteneurs.
+
 ---
 
 ## 17h15 — War game et évaluation finale (15 min)
@@ -1065,3 +1228,20 @@ reste viendra.
 
 Je rappelle le questionnaire de satisfaction Sparks et je reste dix minutes pour les questions
 individuelles.
+
+
+### Pas à pas — war game
+
+Je casse dans **mon** démo si on partage la stack, ou je donne la commande à un membre de chaque
+binôme s'ils ont chacun leur Codespace :
+
+```bash
+curl -X POST http://localhost:5002/chaos/latency/on          # shop-api-2 seulement
+curl -X POST "http://localhost:5001/chaos/cpu?seconds=240"   # CPU depuis shop-api-1
+docker compose stop redis-exporter                            # un exporter qui disparaît
+```
+
+Remise en état après le débrief : `./lab.sh chaos reset && docker compose start redis-exporter`.
+
+---
+

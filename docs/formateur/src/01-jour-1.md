@@ -66,6 +66,17 @@ jour 1).
 Puis `./lab.sh chaos errors on`, et je laisse tourner en arrière-plan : à la pause, le dashboard
 sera rouge. « Voilà ce que vous saurez construire mercredi. »
 
+
+### Pas à pas — accueil
+
+Deck slides 1 à 9 (titre → « Une brique à la fois »). Pendant le tour de table, je note au
+paperboard. Slide « Le lab » : Cmd+Tab vers Safari, onglet Grafana démo, dashboard *TP 5*, tout
+vert. Puis dans le terminal du démo :
+
+```bash
+./lab.sh chaos errors on     # [CS-démo] ; à la pause de 10h15 le dashboard sera rouge
+```
+
 ---
 
 ## Module 1 — Pourquoi l'observabilité (30 min)
@@ -456,6 +467,63 @@ comparera.
 paquets) et refuse de démarrer. Sur Codespaces, l'URL de la datasource reste `http://localhost:9090`
 : c'est Grafana qui interroge Prometheus, sur la même machine.
 
+
+### Pas à pas — exercices 1.1 à 1.4, dans mon Codespace stagiaire
+
+Je projette le Codespace `stagiaire` et j'avance avec eux. Slide 25 (« Exercices 1.1 à 1.4 »)
+reste affichée sur le deck ; je bascule sur Safari.
+
+**1.1.** Dans le terminal :
+
+```bash
+./install/download.sh
+ls install/bin/prometheus/                 # prometheus, promtool, LICENSE, NOTICE
+```
+
+Créer le fichier : dans l'explorateur VS Code (icône en haut à gauche), clic droit sur le dossier
+`install` → **New File…** → `prometheus.yml` → coller :
+
+```yaml
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+```
+
+Cmd+S. Puis :
+
+```bash
+cd install/bin/prometheus
+./prometheus --config.file=../../prometheus.yml --storage.tsdb.path=../../data
+```
+
+Le terminal affiche les logs et reste occupé : c'est voulu. Onglet **PORTS** : la ligne 9090
+apparaît toute seule (« Auto Forwarded »). Globe → Prometheus s'ouvre. Status → Target health :
+une cible UP. Montrer `install/data/` dans l'explorateur : `wal/`, `chunks_head/`.
+
+**1.2.** Dans l'onglet Prometheus, remplacer la fin de l'URL par `/metrics`. Cmd+F sur `# TYPE`.
+
+**1.3.** Menu **Status** → Configuration, Runtime & build information, TSDB status. Onglet
+**Query** : `up`, bouton **Execute**, puis onglet **Graph**. Puis
+`prometheus_http_requests_total{handler="/api/v1/query"}` et `{code=~"4..|5.."}`. Onglet
+**Explain** avec `rate(prometheus_http_requests_total[5m])`.
+
+**1.4.** Nouveau terminal : **Terminal → New Terminal** (le premier reste occupé par Prometheus).
+
+```bash
+cd install/bin/grafana
+./bin/grafana server --homepath=$PWD
+```
+
+PORTS → 3000 → globe. `admin` / `admin`, écran de changement de mot de passe : **Skip**. Menu
+de gauche **Connections → Data sources → Add new data source → Prometheus**. Champ **Prometheus
+server URL** : `http://localhost:9090` (oui, localhost : Grafana et Prometheus tournent sur la
+même machine). Tout en bas, **Save & test** → « Successfully queried the Prometheus API ».
+Menu **Explore** : `up`, puis `rate(prometheus_http_requests_total[5m])`, bouton **Run query**,
+plage **Last 15 minutes**. Bouton **Builder** pour la même requête en cliquant.
+
 ---
 
 ## Module 4 — Configuration de Prometheus (40 min)
@@ -567,6 +635,27 @@ sans alerte.
 **Ce que je vérifie.** Que tout le monde a bien réparé avant le déjeuner. Les binaires restent
 lancés jusqu'à l'exercice 1.7.
 
+
+### Pas à pas — exercices 1.5 et 1.6
+
+**1.5.** Éditer `install/prometheus.yml` : ajouter `scrape_interval: 5s` sous `job_name:
+prometheus` (même indentation que `job_name`). Cmd+S. Troisième terminal :
+
+```bash
+cd install/bin/prometheus && ./promtool check config ../../prometheus.yml
+kill -HUP $(pgrep -x prometheus)
+```
+
+Dans le terminal de Prometheus (le premier) : ligne `Completed loading of configuration file`.
+Target health : colonne *Last scrape* sous 5 s. Requête
+`prometheus_target_interval_length_seconds{quantile="0.99"}`. Remettre 15 s (supprimer la ligne),
+check, HUP.
+
+**1.6.** Ajouter un `:` en trop dans le YAML, Cmd+S, HUP sans valider. Terminal de Prometheus :
+`Error reloading config`. Requête `prometheus_config_last_reload_successful` : 0. Réparer, HUP :
+1. Puis dans le terminal de Prometheus : Ctrl+C, relancer avec le fichier cassé : il refuse et
+rend la main. Réparer, relancer, laisser tourner.
+
 ---
 
 ## Exercice 1.7 — Des binaires aux conteneurs (20 min)
@@ -606,6 +695,27 @@ tout le monde voit deux conteneurs `Up`. Codespaces : l'onglet *Ports* liste mai
 des conteneurs.
 
 ![Ce matin en binaire, cet après-midi en conteneur](../../diagrams/binaire-conteneur.png)
+
+
+### Pas à pas — exercice 1.7
+
+1. Terminal de Prometheus : Ctrl+C. Terminal de Grafana : Ctrl+C. PORTS : les lignes 9090 et 3000
+   disparaissent.
+2. Ouvrir `compose/01-prometheus.yml` dans l'éditeur (explorateur → `compose`), le lire avec eux.
+3. Ouvrir `docker-compose.yml`, supprimer le `# ` devant `- compose/01-prometheus.yml` et
+   `- compose/02-grafana.yml`. Cmd+S.
+
+```bash
+./lab.sh up                # première fois : une minute (pull des images)
+./lab.sh status            # prometheus et grafana Up
+```
+
+4. PORTS → 9090 → globe : Status → Configuration : un seul job. 3000 → globe : `admin` /
+   `formation`. Connections → Data sources : *Prometheus* avec un cadenas ; ouvrir
+   `grafana/provisioning/datasources/prometheus.yml` dans l'éditeur, montrer l'URL
+   `http://prometheus:9090`. Dashboards → *00 - Bienvenue dans le lab*.
+5. `./lab.sh check` puis `./lab.sh reload`, et j'ouvre `lab.sh` dans l'éditeur pour montrer les
+   deux commandes.
 
 ### Exercice 1.8 — Relabeling (bonus, 10 min, après le TP 1)
 
@@ -692,6 +802,17 @@ jamais pour des services.
 - http://localhost:9115 : la page du blackbox avec l'historique des sondes (vide pour l'instant), puis
   http://localhost:9115/probe?module=http_2xx&target=http://shop-api-1:5000/health pour montrer
   `probe_success 1` et `probe_duration_seconds`.
+
+
+### Pas à pas — démonstrations du module 5
+
+Onglet Prometheus du démo : `localhost:9100/metrics` n'est pas accessible directement depuis le
+navigateur (port non redirigé) ; je le montre par le terminal :
+
+```bash
+docker compose exec prometheus wget -qO- http://node-exporter:9100/metrics | grep -E "^node_(cpu_seconds_total|memory_MemAvailable|filesystem_avail)" | head
+docker compose exec prometheus wget -qO- 'http://blackbox-exporter:9115/probe?module=http_2xx&target=http://shop-api-1:5000/health' | grep -E "^probe_(success|duration)"
+```
 
 ---
 
@@ -832,6 +953,56 @@ de vraies questions.
 **Ce que je vérifie.** Que le job `node` est bien dans le `prometheus.yml` de tout le monde :
 les dashboards de demain en dépendent.
 
+
+### Pas à pas — TP 1
+
+**Partie 1.** `docker-compose.yml` : décommenter `- compose/04-node-exporter.yml`, Cmd+S,
+`./lab.sh up`. Ouvrir `prometheus/prometheus.yml` (dossier `prometheus`, pas `install`), ajouter à
+la fin :
+
+```yaml
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+```
+
+```bash
+./lab.sh check && ./lab.sh reload
+```
+
+Target health : `node` UP. Requête `node_uname_info`.
+
+**Partie 2.** Les cinq requêtes, dans l'onglet Query, en Graph :
+`time() - node_boot_time_seconds`,
+`100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes`,
+`100 * (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})`,
+`node_load1` et `count(node_cpu_seconds_total{mode="idle"})`,
+`100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))`. Puis `./lab.sh chaos cpu 120`
+et la courbe CPU en Graph, plage 15 min.
+
+**Partie 3.** Éditer `compose/04-node-exporter.yml`, ajouter `- --collector.processes` et
+`- --no-collector.arp` dans la liste `command:`. Cmd+S.
+
+```bash
+docker compose up -d node-exporter
+```
+
+Requêtes `node_processes_state`, puis `node_arp_entries` (disparaît après quelques minutes).
+
+**Partie 4.**
+
+```bash
+echo "backup_last_run_timestamp_seconds $(date +%s)" > node-exporter/textfile/backup.prom
+echo "backup_files_total 1234" >> node-exporter/textfile/backup.prom
+```
+
+Requête `time() - backup_last_run_timestamp_seconds`.
+
+**Partie 5.** `topk(1, 100 * (1 - node_filesystem_avail_bytes / node_filesystem_size_bytes))`,
+`rate(node_network_receive_bytes_total{device!="lo"}[5m])`. Grafana → Explore, la requête CPU,
+Last 30 minutes. Bonus : Dashboards → **New → Import** → champ « Find and import dashboards » :
+`1860` → **Load** → source Prometheus → **Import**.
+
 ---
 
 ## Module 6 — Instrumenter son application (25 min)
@@ -910,6 +1081,11 @@ Une série coûte de la mémoire (quelques ko dans le head) et de l'index. Quelq
 `apps/shop-api/app.py` dans l'éditeur : les déclarations en haut, le middleware `after_request`
 qui observe chaque requête, la route `/api/checkout` qui incrémente les compteurs métier. Je
 pointe les cinq `TODO` du TP 2, sans les faire.
+
+
+### Pas à pas — démonstration du module 6
+
+Ouvrir `apps/shop-api/app.py` dans l'éditeur, Cmd+F sur `TODO` pour montrer les cinq, sans les faire.
 
 ---
 
@@ -1143,6 +1319,81 @@ buckets = 120 000 séries pour une seule
 métrique. Réponse : on réduit les buckets (6 ou 7 bien choisis), on agrège avec des recording
 rules (jour 2), ou on passe aux native histograms.
 
+
+### Pas à pas — TP 2
+
+**Partie 1.** `docker-compose.yml` : décommenter `- compose/03-shop-api.yml`, `./lab.sh up`
+(build de l'image : une minute). PORTS → 5001 → globe : la page d'accueil ; ajouter `/metrics`.
+Dans `prometheus/prometheus.yml` :
+
+```yaml
+  - job_name: shop-api
+    static_configs:
+      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+        labels:
+          env: formation
+          team: boutique
+```
+
+`./lab.sh check && ./lab.sh reload`. Requête `sum by (route) (rate(http_requests_total[1m]))`.
+
+**Partie 2.** Les cinq TODO dans `apps/shop-api/app.py`. Si je dois débloquer la salle : ouvrir
+`solutions/jour-1/app.py` dans le **démo** (jamais dans le stagiaire) et projeter la partie
+concernée. Puis :
+
+```bash
+docker compose up -d --build shop-api-1 shop-api-2
+```
+
+Vérifier sur `/metrics` que `shop_orders_total` apparaît, puis
+`histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))` et
+`topk(1, sum by (product) (shop_product_views_total))`.
+
+**Partie 3.** Décommenter `- compose/05-exporters.yml`, `./lab.sh up`. Job :
+
+```yaml
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+```
+
+Check, reload. `redis_up`, `topk(3, rate(redis_commands_total[5m]))`.
+
+**Partie 4.** Le job blackbox complet (corrigé dans le chapitre Jour 1, TP 2 partie 4). Check,
+reload. `probe_success`. Puis :
+
+```bash
+docker compose stop shop-api-2      # up reste 1, probe_success passe à 0
+docker compose start shop-api-2
+```
+
+**Partie 5.**
+
+```bash
+./lab.sh batch
+```
+
+PORTS → 9091 → globe : les métriques poussées. Job :
+
+```yaml
+  - job_name: pushgateway
+    honor_labels: true
+    file_sd_configs:
+      - files: ["targets/*.yml"]
+        refresh_interval: 30s
+```
+
+Nouveau fichier `prometheus/targets/pushgateway.yml` :
+
+```yaml
+- targets: ["pushgateway:9091"]
+  labels:
+    tier: outils
+```
+
+Check, reload une fois. `time() - backup_last_success_timestamp_seconds`. Changer `tier: batch`
+dans le fichier, Cmd+S, attendre 30 s, Target health : le label a changé sans reload.
+
 ---
 
 ## 17h20 — Récap et quiz du jour 1 (10 min)
@@ -1166,3 +1417,15 @@ sien avant de partir : demain matin, tout le monde repart du même point.
 
 Je rappelle : ne pas faire `./lab.sh reset` ce soir, on veut de l'historique pour demain. Sur
 Codespaces, le Codespace peut s'arrêter, les données restent.
+
+
+### Pas à pas — récap et fin de journée
+
+Deck slide « Récap du jour 1 ». Puis dans le démo, ouvrir `solutions/jour-1/prometheus.yml` et
+`solutions/jour-1/app.py` dans l'éditeur, projeter, laisser comparer. Avant de partir, dans le
+stagiaire : `./lab.sh status` : douze conteneurs `Up`. Ne pas faire `reset`.
+
+Le soir : arrêter les deux Codespaces (https://github.com/codespaces → ··· → Stop).
+
+---
+
