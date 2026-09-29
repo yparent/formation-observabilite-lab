@@ -115,6 +115,37 @@ Deux modificateurs :
 Analogie pour `by` et `without` : un tableur avec une colonne par label. `sum by (route)`,
 c'est un tableau croisé dynamique avec `route` en ligne et rien en colonne.
 
+**Les quatre types de résultats, au tableau.** Je dessine une frise horizontale, le temps, avec
+des petits points toutes les 15 secondes : ce sont les échantillons d'une série. Un *instant
+vector*, c'est un trait vertical à un instant T : pour chaque série, le dernier point avant le
+trait. Un *range vector*, c'est un rectangle qui couvre 5 minutes : pour chaque série, tous les
+points dedans, et ça ne se dessine pas, ça se donne à une fonction qui en sort une valeur. Puis
+je dessine ce que fait Grafana : il pose le trait vertical à chaque pas de temps, de gauche à
+droite, et relie les valeurs. C'est pour ça qu'un graphique Grafana est une suite d'instant
+vectors, et qu'une requête qui marche en mode Table marche en mode Graph.
+
+**Les agrégations, avec le tableau croisé dynamique.** Tout le monde a fait un tableau croisé
+dans Excel : des lignes, des colonnes, et une somme au croisement. `sum by (route)`, c'est
+« mets `route` en ligne et additionne tout le reste ». `sum without (instance)`, c'est « enlève
+la colonne `instance` et additionne ce qui devient identique ». `sum` tout court, c'est le total
+général, une seule cellule. Je le dessine : un tableau à quatre lignes (les séries avec leurs
+labels) et je montre les lignes qui fusionnent quand un label disparaît. La différence entre
+`by` et `without` : `by` dit ce qu'on garde, `without` dit ce qu'on jette ; avec `without`, un
+label qu'on n'a pas prévu, comme `env`, reste dans le résultat, c'est parfois ce qu'on veut.
+
+**La comparaison qui filtre.** `shop_stock_units < 20` ne renvoie pas vrai ou faux : elle
+renvoie les séries qui passent le filtre, avec leur valeur. C'est un tamis. Et c'est le
+principe des alertes de mercredi : une alerte, c'est une requête qui renvoie quelque chose.
+Rien, pas d'alerte ; une série, une alerte ; dix séries, dix alertes. Le `bool` transforme le
+tamis en 0/1 pour toutes les séries, utile pour compter.
+
+> **Anecdote — le graphique vide.** Ma première semaine avec Prometheus, j'ai passé une heure
+> sur un graphique Grafana vide avec le message « invalid expression type "range vector" ».
+> J'avais mis `http_requests_total[5m]` dans le panel, en me disant que je voulais « les cinq
+> dernières minutes ». Le graphique voulait une valeur par instant, je lui donnais vingt
+> valeurs par instant. La règle que j'aurais aimé qu'on me donne : les crochets vont toujours
+> dans une fonction. Vous l'avez, gardez-la.
+
 ### Ce que je montre
 
 Dans Prometheus, onglet Query, chaque concept avec sa requête, en montrant le résultat en
@@ -152,9 +183,20 @@ projette le corrigé d'un ou deux exercices.
 `up` — 10 séries (tous les jobs du jour 1, dont quatre sondes blackbox), valeur 1 partout si
 tout va bien. `up{job="shop-api"}` : 2.
 
+*En corrigeant 2.1 :* « `up` renvoie une série par cible, dix chez vous, et une valeur, 1
+ou 0. C'est la première requête que je tape sur n'importe quel Prometheus inconnu : elle me dit
+ce qu'il surveille et ce qui est cassé. Avec `{job="shop-api"}`, deux séries : les accolades
+filtrent, on choisit les pochettes du classeur. »
+
 **2.2** — Les requêtes HTTP en erreur (4xx ou 5xx) sur la boutique, sans le `/metrics`.
 `http_requests_total{job="shop-api", status=~"4..|5..", route!="/metrics"}`
 Erreur classique : `status=~"4|5.."` (la regex est ancrée, `4` seul ne matche pas `404`).
+
+*En corrigeant 2.2 :* « Trois conditions dans les mêmes accolades, séparées par des virgules,
+et elles s'additionnent : c'est un ET. `status=~"4..|5.."` : la barre verticale est un OU dans la
+regex, et les deux points sont deux caractères quelconques. La regex est ancrée : `4` seul ne
+matche pas `404`, il faudrait `4.*`. Et `route!="/metrics"` : on retire les scrapes de
+Prometheus lui-même, qui compteraient comme du trafic. »
 
 **2.3** — Les cinq dernières minutes de `http_requests_total` pour shop-api-1 sur `/api/checkout`
 (range vector). Combien de points ? Pourquoi ?
@@ -162,37 +204,81 @@ Erreur classique : `status=~"4|5.."` (la regex est ancrée, `4` seul ne matche p
 points par série (300 s / 15 s de scrape). Le graphique refuse de l'afficher : un range
 vector n'est pas dessinable.
 
+*En corrigeant 2.3 :* « Les crochets demandent un range vector : pour chaque série, tous
+les points des cinq dernières minutes. Vingt points, parce que 300 secondes divisées par un
+scrape toutes les 15 secondes. L'onglet Graph refuse, et c'est normal : on ne peut pas dessiner
+vingt valeurs au même instant. À quoi ça sert alors ? À nourrir une fonction, `rate`, dans une
+heure. Les crochets vont toujours dans une fonction. »
+
 **2.4** — Pourcentage de mémoire disponible sur le serveur.
 `100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes`. Appariement automatique
 sur `{instance, job}`.
 
+*En corrigeant 2.4 :* « Une division entre deux métriques. Prometheus prend chaque série de
+gauche et cherche à droite la série qui a exactement les mêmes labels ; ici `instance` et `job`
+sont identiques, ça s'apparie. Si les labels différaient, résultat vide, on verra comment faire
+ce matin avec les jointures. Le `100 *` : un nombre multiplié par un vecteur, ça s'applique à
+chaque série. »
+
 **2.5** — Combien d'articles y avait-il dans les paniers il y a 10 minutes ? Et l'écart avec
 maintenant ?
 `shop_cart_items offset 10m` puis `shop_cart_items - shop_cart_items offset 10m`.
+
+*En corrigeant 2.5 :* « `offset 10m` décale la lecture dans le passé : la même série, telle
+qu'elle était il y a dix minutes. La soustraction apparie la série avec elle-même décalée. C'est
+la façon de répondre à "est-ce que ça a bougé ?", et demain à "est-ce mieux ou pire qu'hier à la
+même heure ?" avec `offset 1d`. »
 
 **2.6** — Nombre total de requêtes reçues par instance, tous codes et routes confondus.
 `sum by (instance) (http_requests_total{job="shop-api"})`
 Question piège : est-ce que ça veut dire quelque chose ? Un peu : c'est le total depuis le
 démarrage. Ce n'est pas un débit.
 
+*En corrigeant 2.6 :* « `sum by (instance)` : le tableau croisé avec `instance` en ligne. On
+additionne les méthodes, les routes, les codes. Mais regardez le nombre : c'est le total depuis le
+démarrage du conteneur. Il ne veut rien dire tout seul, et il repartira à zéro au prochain
+redémarrage. C'est un compteur kilométrique, pas une vitesse. Ce qu'on veut, c'est la vitesse :
+`rate`, tout à l'heure. »
+
 **2.7** — Même chose, mais en gardant tout sauf `method`, `status`, `route`.
 `sum without (method, status, route) (http_requests_total{job="shop-api"})`
 Résultat identique à 2.6 si `env` et `team` sont constants ; la différence, c'est que
 `without` garde `env` et `team` dans le résultat. On compare les deux sorties.
 
+*En corrigeant 2.7 :* « `without` jette les trois labels cités et garde tous les autres : le
+résultat est le même chiffre qu'en 2.6, mais avec `env` et `team` en plus dans les labels.
+Quand on écrit une recording rule qui doit resservir partout, `without` est plus sûr : un label
+ajouté plus tard survit. Quand on veut un résultat propre pour un graphique, `by`. »
+
 **2.8** — Les trois produits les plus en stock, et le moins en stock.
 `topk(3, shop_stock_units)` (attention : deux instances, donc chaque produit apparaît deux
 fois ; d'où `topk(3, max by (product) (shop_stock_units))`) et `bottomk(1, ...)`.
 
+*En corrigeant 2.8 :* « Le piège : deux instances de la boutique, donc chaque produit apparaît
+deux fois, et `topk(3, ...)` peut renvoyer trois fois le même produit. D'abord on agrège par
+produit, `max by (product)`, puis on prend le top. Règle générale : on réduit d'abord, on classe
+ensuite. »
+
 **2.9** — Les produits dont le stock est sous 60 unités. Puis la même chose en 0/1 pour tous
 les produits.
 `shop_stock_units < 60` puis `shop_stock_units < bool 60`.
+
+*En corrigeant 2.9 :* « Le tamis. `< 60` ne renvoie que les séries sous 60, avec leur valeur ;
+les autres disparaissent. Avec `bool`, toutes les séries restent, avec 1 ou 0. Le premier sert
+aux alertes, le second aux comptages : `sum(shop_stock_units < bool 60)` donne le nombre de
+produits en rupture. »
 
 **2.10** — Combien de routes distinctes la boutique a-t-elle servies ? (Deux agrégations
 imbriquées.)
 `count(count by (route) (http_requests_total{job="shop-api"}))`
 Le `count by (route)` intérieur donne une série par route ; le `count` extérieur les compte.
 Pattern à retenir : « combien de valeurs distinctes pour ce label ».
+
+*En corrigeant 2.10 :* « Deux étages. L'intérieur, `count by (route)`, donne une série par
+route : le nombre de séries derrière chaque route, on s'en moque, ce qui compte c'est qu'il y en
+ait une par route. L'extérieur, `count`, compte ces séries : le nombre de routes distinctes.
+C'est le pattern "combien de valeurs distinctes pour ce label", et il resservira mercredi pour la
+cardinalité : `count(count by (label) (metric))`. »
 
 **Ce que je vérifie.** Que personne n'est bloqué sur la syntaxe des accolades. Les stagiaires
 les plus rapides font 2.10 en 3 minutes ; je leur demande d'écrire la même chose pour « combien
@@ -311,6 +397,29 @@ de points. Réflexes :
 Prometheus 3 a un onglet *Explain* et l'API `/api/v1/query?stats=all` qui donne le nombre
 d'échantillons lus. Je montre.
 
+**Les buckets, au tableau.** Je dessine un escalier : sur l'axe horizontal les bornes `le`,
+0,05 s, 0,1, 0,25, 0,5, 1, +Inf ; sur l'axe vertical le nombre de requêtes dont la durée est
+*inférieure ou égale* à la borne. L'escalier monte toujours, parce que les buckets sont
+cumulatifs : le bucket 0,25 contient tout ce qui était dans le bucket 0,1. Le p95, c'est
+l'endroit où l'escalier atteint 95 % de la dernière marche, et `histogram_quantile` interpole
+entre les deux marches voisines. D'où deux conséquences : sans le label `le`, il n'y a plus de
+marches, la fonction renvoie NaN ; et la précision dépend de l'écart entre les marches, on ne
+saura jamais dire 180 ms si les marches sont 100 et 250.
+
+**rate, avec la voiture.** Le compteur kilométrique affiche 150 000 km. `rate(km[5m])`, c'est
+la vitesse moyenne sur les cinq dernières minutes : lisse, on ne voit pas le coup de frein.
+`irate`, c'est la vitesse lue entre les deux derniers tours de roue : on voit tout, y compris ce
+qu'on ne voulait pas voir. `increase(km[1h])`, c'est la distance parcourue dans la dernière
+heure. Et les trois savent que quand le compteur repasse à zéro, on a changé de voiture, pas
+reculé de 150 000 km.
+
+> **Anecdote — l'alerte sur irate.** Une équipe avait écrit son alerte de taux d'erreur avec
+> `irate` « pour être réactif ». Elle sonnait toutes les nuits à 3h12, pendant une seconde,
+> quand le batch de nettoyage faisait deux requêtes dont une en erreur : 50 % d'erreur entre
+> deux points. Personne ne dormait. Remplacé par `rate` sur cinq minutes avec un `for` de deux
+> minutes : plus jamais sonné pour rien, et elle a sonné le jour où il fallait. `irate`, c'est
+> pour un graphique qu'on regarde ; `rate`, c'est pour tout ce qui décide.
+
 ### Ce que je montre
 
 - La courbe de `rate` contre `irate` sur `shop_orders_total` : je lance `./lab.sh traffic 30`
@@ -326,47 +435,111 @@ d'échantillons lus. Je montre.
 **2.11** — Débit de requêtes par seconde, par route, sur la boutique.
 `sum by (route) (rate(http_requests_total{job="shop-api"}[5m]))` — `/api/products` domine.
 
+*En corrigeant 2.11 :* « Le pattern que vous écrirez le plus souvent de votre vie : `sum by`
+sur un `rate`. `rate` transforme chaque compteur en vitesse, par série ; `sum by (route)`
+additionne les vitesses des méthodes, des codes, des instances, pour une vitesse par route. On
+agrège toujours *après* le rate, jamais avant : un rate sur une somme de compteurs qui
+redémarrent à des moments différents donne n'importe quoi. »
+
 **2.12** — Combien de commandes ont été passées dans la dernière heure ? Par moyen de paiement ?
 `sum(increase(shop_orders_total[1h]))` puis `sum by (payment_method) (increase(shop_orders_total[1h]))`.
 Je fais remarquer les décimales et je fais ajouter `round()`.
 
+*En corrigeant 2.12 :* « `increase` sur une heure, c'est la distance parcourue. Regardez les
+décimales : 47,3 commandes. Prometheus extrapole sur les bords de la fenêtre, parce que le
+premier et le dernier point ne tombent jamais exactement sur l'heure. Ce n'est pas un bug, c'est
+une estimation, et pour un graphique c'est parfait. Pour un chiffre à montrer à un directeur,
+`round()`. »
+
 **2.13** — Chiffre d'affaires par heure (en euros/h) à partir de `shop_revenue_euros_total`.
 `sum(rate(shop_revenue_euros_total[5m])) * 3600`. C'est le panneau vedette de cet après-midi.
+
+*En corrigeant 2.13 :* « Le chiffre d'affaires est un compteur d'euros. `rate` donne des euros
+par seconde ; fois 3600, des euros par heure. C'est le panneau vedette de cet après-midi, celui
+que le directeur commercial regarde. Et remarquez : on ne stocke pas "le CA de l'heure", on
+stocke un compteur qui monte, et on calcule ce qu'on veut après. C'est ça, la force du
+modèle. »
 
 **2.14** — Taux d'erreur 5xx global, en pourcentage. Puis lancez `./lab.sh chaos errors on`,
 attendez deux minutes, observez, puis `./lab.sh chaos errors off`.
 `100 * sum(rate(http_requests_total{job="shop-api", status=~"5.."}[5m])) / sum(rate(http_requests_total{job="shop-api"}[5m]))`
 Il monte vers 35-40 % puis redescend lentement (la fenêtre de 5 min lisse).
 
+*En corrigeant 2.14 :* « Le ratio le plus écrit au monde. Deux `sum` de `rate`, division,
+fois 100. Pendant le chaos, il monte vers 40 % puis redescend lentement : la fenêtre de cinq
+minutes se vide progressivement. Et le piège pour mercredi : quand il n'y a jamais eu d'erreur
+5xx, le numérateur est vide, pas zéro, et la division renvoie vide. Une alerte "supérieur à 5 %"
+ne sonnera jamais, un panel affichera No data au lieu de 0 %. La parade s'appelle `or vector(0)`,
+on la met dans le TP 5. »
+
 **2.15** — Latence p50, p95 et p99 sur toutes les routes. Puis uniquement sur `/api/checkout`.
 `histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="shop-api"}[5m])))`,
 et avec `route="/api/checkout"` dans le sélecteur. Les trois quantiles dans le même graphique
 en ajoutant trois requêtes (dans Grafana tout à l'heure).
 
+*En corrigeant 2.15 :* « Trois choses dans l'ordre : `rate` sur chaque bucket, `sum by (le)`
+qui additionne les instances et les routes mais garde les marches de l'escalier, et
+`histogram_quantile` qui lit l'escalier. Qui a oublié `by (le)` ? Vous avez eu NaN, ou vide.
+C'est l'erreur numéro un de PromQL, tout le monde la fait une fois. Pour le p50 et le p99, la
+même requête avec 0,5 et 0,99 : dans Grafana, trois requêtes sur le même graphique. »
+
 **2.16** — Latence moyenne sur la même métrique. Comparez-la au p95.
 `sum(rate(http_request_duration_seconds_sum{job="shop-api"}[5m])) / sum(rate(http_request_duration_seconds_count{job="shop-api"}[5m]))`
 La moyenne est très en dessous du p95 : la distribution a une queue.
+
+*En corrigeant 2.16 :* « La moyenne : la somme des durées divisée par le nombre de requêtes,
+en `rate` toutes les deux pour rester sur la même fenêtre. Elle est très en dessous du p95 : la
+plupart des requêtes sont rapides, quelques-unes très lentes, et la moyenne les cache. Un client
+sur vingt attend une seconde pendant que la moyenne dit 80 ms. On n'alerte jamais sur une
+moyenne. »
 
 **2.17** — CPU utilisé en %, par instance, à partir de `node_cpu_seconds_total`. Puis la
 répartition par mode (`user`, `system`, `iowait`...) sans `idle`.
 `100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])))` puis
 `sum by (mode) (rate(node_cpu_seconds_total{mode!="idle"}[5m]))`.
 
+*En corrigeant 2.17 :* « La formule CPU du TP 1, avec `by (instance)` pour avoir une valeur
+par serveur. Puis la répartition par mode : `sum by (mode)` des rates hors `idle` ; chaque mode
+est une fraction du temps, et empilées elles font le CPU occupé. Demain, c'est le graphique
+empilé du TP 4, et on verra pourquoi il faut diviser par le nombre de cœurs. »
+
 **2.18** — Débit réseau entrant en bits/s, hors interfaces `lo`, `veth*`, `br*`, `docker*`.
 `sum by (device) (rate(node_network_receive_bytes_total{device!~"lo|veth.*|br.*|docker.*"}[5m])) * 8`
+
+*En corrigeant 2.18 :* « Des octets par seconde, fois 8, des bits par seconde : les unités
+réseau se lisent en bits. Et la regex négative sur `device` : on jette la boucle locale et les
+interfaces virtuelles de Docker, sinon on compte le même trafic plusieurs fois. »
 
 **2.19** — Le pic du nombre d'articles dans les paniers sur la dernière heure, et le pic de débit
 de requêtes sur la dernière heure (sous-requête).
 `max_over_time(shop_cart_items[1h])` puis `max_over_time(sum(rate(http_requests_total{job="shop-api"}[1m]))[1h:1m])`.
+
+*En corrigeant 2.19 :* « Sur une gauge, `max_over_time` sur une heure donne le pic. Pour un
+pic de *débit*, il faut d'abord calculer le débit à chaque minute, puis prendre le max : c'est
+une sous-requête, `[1h:1m]`, une heure de fenêtre au pas d'une minute. Puissant, et coûteux :
+soixante rates pour une valeur. On s'en sert quand on en a besoin, pas dans un dashboard qui
+se rafraîchit toutes les cinq secondes. »
 
 **2.20** — Ajoutez le label `version` (de `shop_app_info`) aux séries de débit par instance.
 `sum by (instance) (rate(http_requests_total{job="shop-api"}[5m])) * on (instance) group_left(version) shop_app_info`
 Piège : `sum by (instance)` est obligatoire à gauche, sinon il y a plusieurs séries par instance
 des deux côtés et Prometheus refuse (many-to-many).
 
+*En corrigeant 2.20 :* « La jointure. `shop_app_info` vaut 1 et porte le label `version` ;
+les séries de débit ne l'ont pas. On multiplie par 1, ce qui ne change pas la valeur, en disant
+`on (instance)` : apparie sur ce label seulement ; et `group_left(version)` : prends le label
+`version` du côté droit. En mode Table, on voit la colonne `version` apparaître. C'est comme ça
+qu'on affiche "quelle version tourne où" dans un dashboard sans mettre la version sur toutes les
+métriques. »
+
 **2.21** — Prometheus scrape-t-il un job `paiement` ? Écrivez la requête qui renverrait 1 s'il
 n'existe pas.
 `absent(up{job="paiement"})` → 1. `absent(up{job="shop-api"})` → vide.
+
+*En corrigeant 2.21 :* « `absent` renvoie 1 quand la série n'existe pas, et rien quand elle
+existe. C'est contre-intuitif et c'est indispensable : une cible qu'on a oublié de configurer ne
+sera jamais `up == 0`, elle n'existera simplement pas, et aucune alerte sur `up` ne la verra.
+`absent(up{job="paiement"})` est la seule alerte qui attrape un oubli. »
 
 **2.22** — À ce rythme, combien vaudra `shop_revenue_euros_total` dans une heure ? Et dans
 combien de temps le disque `/` sera-t-il plein ? (`predict_linear`)
@@ -374,6 +547,12 @@ combien de temps le disque `/` sera-t-il plein ? (`predict_linear`)
 `predict_linear(node_filesystem_avail_bytes{mountpoint="/"}[1h], 24*3600)` : négatif = plein
 avant 24 h. Sur nos machines de lab, le disque bouge peu, la prédiction est bruitée ; c'est
 normal, c'est un signal à moyen terme.
+
+*En corrigeant 2.22 :* « `predict_linear` trace une droite sur la fenêtre et la prolonge :
+"à ce rythme, dans une heure, ça vaudra ça". Pour le chiffre d'affaires, c'est une projection.
+Pour un disque, c'est l'alerte intelligente de mercredi : "le disque sera plein dans 24 heures",
+au lieu de "le disque est à 90 %", qui sonne sur un disque de 10 To qui se remplit de 1 Go par
+mois. »
 
 **Ce que je vérifie.** Le `by (le)` dans 2.15 : c'est l'erreur numéro un. Et que le chaos a
 bien été remis à `off`.
@@ -450,6 +629,31 @@ de `histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seco
 et de `route:http_request_duration_seconds:p95_5m`. Sur notre petit lab, la différence est de
 quelques millisecondes ; en production avec des milliers de séries, c'est des secondes.
 
+
+### Animer le TP 3
+
+**Avant de lancer (1 min).** « Vingt minutes, et si on déborde sur 14h ce n'est pas grave.
+L'objectif : sept règles, et surtout un test qui les vérifie. »
+
+**Pendant la partie 1.** L'erreur que je vois toujours : un pourcentage dans la règle
+(`100 *`). « Les recording rules stockent des ratios entre 0 et 1 ; la conversion en pourcentage,
+c'est le travail de Grafana avec l'unité `percentunit`. Sinon on ne sait plus, en lisant une
+règle, si elle est en pour cent ou en fraction. » La convention de nommage, je la fais lire à
+voix haute : `job:http_requests:rate5m`, « au niveau du job, les requêtes HTTP, en rate sur cinq
+minutes ». Deux points, pas des underscores : c'est ce qui distingue une règle d'une métrique
+brute quand on la croise dans un dashboard.
+
+**Pendant la partie 2.** Le fichier de test déroute tout le monde la première fois. Je
+l'explique au tableau : « `input_series` fabrique une fausse série : `0+10x40` veut dire "part de
+0, ajoute 10 à chaque intervalle, quarante fois". L'intervalle est celui de `interval`, 15 s.
+Donc un compteur qui monte de 10 toutes les 15 secondes : un rate de 0,667 par seconde.
+`promql_expr_test` dit : à la cinquième minute, je m'attends à ce que `job:http_requests:rate5m`
+vaille 0,667 ; si la règle est fausse, le test échoue avec la valeur obtenue. » Puis je casse une
+règle chez quelqu'un, je relance `./lab.sh test`, et je montre le message. « Ça se met dans la
+CI, et une règle non testée sonnera un dimanche pour rien. »
+
+**Correction (3 min).** Je projette `solutions/jour-2/recording.yml` et je vérifie que
+`job:http_requests:rate5m` renvoie des séries chez tout le monde : le TP 5 s'en sert.
 
 ### Pas à pas — TP 3
 
@@ -550,6 +754,20 @@ tous les graphiques : un déploiement, une bascule chaos. Source : une requête 
 (`changes(shop_chaos_mode[1m]) > 0`) ou une saisie manuelle (Ctrl+clic sur un graphique). Les
 liens de dashboard (barre du haut) et les data links (clic sur une série) permettent de
 naviguer du global vers le détail.
+
+**La comparaison que je donne.** Prometheus, c'est la base de données et le calcul ; Grafana,
+c'est le tableau de bord de la voiture. Il ne mesure rien, il affiche ce que les capteurs lui
+envoient, et son seul travail est d'être lisible en un coup d'œil, de nuit, à 130 km/h. Un
+tableau de bord avec quarante cadrans est un mauvais tableau de bord, même si chaque cadran est
+exact. C'est le critère de tout l'après-midi : est-ce que quelqu'un qui ne connaît pas
+Prometheus comprend en dix secondes si ça va ?
+
+> **Anecdote — le dashboard du directeur.** Un client m'avait demandé « un dashboard pour le
+> comité de direction ». L'équipe technique avait livré quarante-deux panels, avec les p99 par
+> route et la mémoire des pods. Le directeur l'a regardé une fois. Je l'ai remplacé par quatre
+> chiffres : commandes de l'heure, chiffre d'affaires du jour, part d'erreurs, temps de réponse
+> ressenti, avec trois couleurs. Il est resté affiché dans le couloir pendant deux ans. Un
+> dashboard répond à un besoin, et le besoin, c'est celui de la personne qui le regarde.
 
 ### Ce que je montre
 
@@ -716,6 +934,49 @@ panel « Processus » (`node_processes_state`, pie chart) ou passent le dashboar
 pour comparer.
 
 
+### Animer le TP 4, étape par étape
+
+**Avant de lancer (2 min).** Je projette le résultat attendu et je le laisse à l'écran. « Soixante
+minutes, quatre étapes. Vous avez la liste des panels, les métriques et les options attendues ;
+les requêtes, vous les avez écrites ce matin. Sauvegardez toutes les dix minutes : Grafana ne
+sauvegarde pas tout seul. »
+
+**Pendant l'étape 0.** La variable. Je vérifie deux choses en passant : *Multi-value* et
+*Include All* cochés, et la valeur `.*` pour All. Puis la phrase à répéter jusqu'à ce que tout
+le monde l'ait : « multi-valeur, donc `=~`, jamais `=` ». Le premier panel vide de la journée
+vient toujours de là.
+
+**Pendant l'étape 1.** Les cinq indicateurs. Je circule et je regarde les unités : un uptime
+sans unité affiche `312456`, avec `dtdurations` il affiche `3 d 14 h`. « Grafana convertit, ce
+n'est pas à vous de diviser par 3600. » Sur la Gauge CPU, celui qui a une jauge par cœur a
+oublié `avg by (instance)` : je le montre à tout le monde, c'est pédagogique. Les seuils : « le
+vert, l'orange à 70, le rouge à 90, et les mêmes sur tout le dashboard ; une couleur veut dire
+la même chose partout ».
+
+**Pendant l'étape 2.** Le piège `scalar()`. Quand le premier panel CPU par mode reste vide, je
+m'arrête et j'explique au tableau : « `count(...)` renvoie une série sans aucun label ; les
+rates ont un label `mode` ; Prometheus ne trouve aucune paire et renvoie vide. `scalar()`
+transforme la série unique en nombre, et un nombre s'applique à tout. » L'override : *Add field
+override → Fields with name → Utilisée → Add override property → Color scheme → Single color*.
+Je le fais une fois projeté, lentement.
+
+**Pendant l'étape 3.** La table. C'est l'étape où je passe le plus de temps derrière les
+épaules. L'ordre des transformations compte : *Join by field* d'abord, sur `mountpoint`, puis
+*Organize fields* pour masquer et renommer, puis *Sort by*. Ceux qui ont essayé *Merge* et
+obtenu une table à trous : « Merge apparie sur tous les labels communs, et `device` ou `fstype`
+diffèrent d'une ligne à l'autre ; Join by field apparie sur celui qu'on choisit ». Le réseau en
+négatif pour l'émission : « une convention de lecture, réception vers le haut, émission vers le
+bas, qu'on retrouve partout ».
+
+**Pendant l'étape 4.** State timeline et value mappings : « 1 devient UP en vert, 0 devient
+DOWN en rouge ; c'est le panel que le support comprend sans rien connaître ». Le `or vector(0)`
+sur le Stat des cibles down : « sans lui, quand rien n'est down, le panel affiche No data au
+lieu de 0, et No data fait peur ».
+
+**Correction (5 min).** Je projette le corrigé `tp4-serveur-linux.json` importé dans le démo, et
+je fais vérifier le nom et le dossier : *Formation*, `TP 4 - Serveur Linux`. Le TP 5 y fait un
+lien, et l'alerte Grafana de mercredi pointe sur un de ses panels.
+
 ### Pas à pas — TP 4
 
 Grafana → Dashboards → New → New dashboard. **Settings** (icône engrenage) → **Variables →
@@ -864,6 +1125,49 @@ dashboards directement dans un dépôt GitHub/GitLab, avec pull request. Je le m
 capture d'écran seulement (il faut un dépôt et un token).
 
 
+### Animer le TP 5, étape par étape
+
+**Avant de lancer (2 min).** Résultat attendu projeté. « Soixante minutes, dont dix pour la fin :
+exporter le dashboard en fichier et le provisionner. C'est la partie la plus importante : un
+dashboard qui n'est pas dans Git n'existe pas. »
+
+**Pendant l'étape 0.** Les variables chaînées : `route` dépend de `instance`, avec
+`label_values(http_requests_total{instance=~"$instance"}, route)`. « Changez `instance`, la liste
+des routes se recalcule. C'est comme ça qu'on évite les listes de mille valeurs. »
+
+**Pendant l'étape 1.** Le chiffre d'affaires par heure en Stat avec l'unité `currencyEUR` :
+quand il s'affiche avec le symbole €, je le fais remarquer, « c'est le premier panel de la
+formation qu'un directeur commercial comprend ». Le pie chart des moyens de paiement : « cinq
+parts maximum, sinon personne ne lit ». Le stock en Bar gauge mode LCD avec un seuil à 15 : le
+produit en rupture passe rouge tout seul.
+
+**Pendant l'étape 2.** Le taux d'erreur avec `or vector(0)` et un seuil rouge à 5 % ; les trois
+quantiles sur le même graphique, trois requêtes, légendes `p50`, `p95`, `p99`. La heatmap :
+« la distribution des latences dans le temps, chaque colonne est un histogramme ; quand une
+bande claire apparaît en haut, une partie des clients attend ». Quelqu'un lance
+`./lab.sh chaos latency on` et tout le monde regarde la heatmap changer.
+
+**Pendant l'étape 3.** La table des routes avec *Organize fields* et une colonne colorée par
+seuil ; le bar chart par code HTTP ; le panel « version déployée » avec la jointure de ce matin :
+« la requête 2.20, telle quelle, dans un panel Stat ».
+
+**Pendant l'étape 4.** L'annotation sur `changes(shop_chaos_mode[1m]) > 0` : je bascule le chaos
+et le trait vertical apparaît sur tous les graphiques. « La latence monte à 15h42, et le trait à
+15h41 dit pourquoi. En production, ce trait, c'est un déploiement, posé par la CI avec un POST sur
+l'API. » Les deux liens : vers le TP 4, avec la variable `instance` transmise, et vers
+Prometheus.
+
+**Pendant l'étape 5.** Export as code, Model *Classic*, format JSON. J'explique les deux modèles
+une seule fois : « Classic, c'est le format que le provisioning par fichier lit depuis dix ans ;
+V2 Resource, c'est le nouveau format de Grafana 13 pour Git Sync et la nouvelle API. On reste en
+Classic. » Le fichier va dans `grafana/dashboards/`, `docker compose restart grafana`, et le
+cadenas apparaît. « Essayez de le modifier : Grafana vous propose "Save as copy". Le fichier
+fait foi, pas les clics. C'est le vendredi soir que ça se comprend : le dashboard est dans Git,
+avec un historique, une revue, et un `git revert` si quelqu'un l'a cassé. »
+
+**Correction (5 min).** Le corrigé `tp5-boutique.json` est déjà provisionné dans le démo ; je le
+projette à côté du leur et on compare panel par panel.
+
 ### Pas à pas — TP 5
 
 Même mécanique, chapitre Jour 2, TP 5. Étape 4, annotation : Settings → **Annotations → New
@@ -928,6 +1232,21 @@ ailleurs. Dashboards provisionnés en lecture seule dans un dossier « Officiel 
 Ma réponse : la plupart des entreprises n'ont pas besoin d'Enterprise. On y va pour SAML/SCIM
 imposés par la sécurité, pour un connecteur commercial, ou pour les rapports. Grafana Cloud est
 intéressant pour ne pas opérer Prometheus/Loki/Tempo soi-même (c'est Mimir derrière).
+
+> **Anecdote — les droits du vendredi.** Chez un client, tout le monde était Admin de Grafana,
+> « parce que c'est plus simple ». Un vendredi, quelqu'un a modifié le dashboard de production
+> pour tester une idée, l'a sauvegardé, et est parti en week-end. L'astreinte a passé deux jours
+> avec des panels qui affichaient les données de la préprod. Depuis : un dossier *Officiel*
+> provisionné en lecture seule, un dossier par équipe en Editor, et la règle « on teste dans une
+> copie ». Les droits ne sont pas de la bureaucratie, c'est ce qui permet de faire confiance à ce
+> qu'on regarde à 3h du matin.
+
+**Le modèle de droits, avec l'immeuble.** L'organisation, c'est l'immeuble : deux organisations
+ne se voient pas, ce sont deux immeubles. Le dossier, c'est l'appartement : on donne les clés à
+une team, pas à des personnes, parce que les personnes changent d'équipe. Le rôle global, Viewer,
+Editor, Admin, c'est le badge d'entrée : il dit ce qu'on peut faire par défaut partout, et les
+permissions de dossier l'affinent. Le service account, c'est le badge du robot de nettoyage :
+un token, des droits minimaux, pas de mot de passe humain.
 
 ### Ce que je montre
 
