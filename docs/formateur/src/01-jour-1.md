@@ -182,6 +182,19 @@ temporelles de n'importe quelle source. Il ne stocke rien et ne collecte rien : 
 Prometheus (et Loki, Tempo, SQL, Elasticsearch...) et dessine. Version 13 sortie en avril
 2026 ; on utilise la 13.2.
 
+**Ce que je fais faire (3 min).** Avant de passer au module 2, je demande à deux personnes de
+reformuler : « monitoring, observabilité, c'est quoi la différence, en une phrase ? » La bonne
+réponse contient l'idée de *question imprévue* : le monitoring répond aux questions qu'on a
+préparées, l'observabilité permet d'en poser une qu'on n'avait pas prévue. Si personne ne
+l'a, je redonne l'exemple des deux pilotes et je passe.
+
+**Le schéma au tableau (trois signaux).** Trois colonnes, Métriques / Logs / Traces. Sous
+chacune, une seule ligne d'exemple : `http_requests_total 51`, une ligne de log avec son
+horodatage et son message, et une flèche « API → paiement → base, 230 ms ». Puis le coût par
+point en dessous : « quelques octets », « quelques centaines d'octets », « quelques Ko ». Le
+tableau reste là toute la journée, je le pointe chaque fois qu'on choisit une métrique plutôt
+qu'un log.
+
 ### Ce que je montre
 
 Rien de technique ici. Je garde le dashboard rouge en arrière-plan.
@@ -273,6 +286,43 @@ moyenne 1 à 2 octets. Rétention par défaut : 15 jours. On rentre dans le dét
 Prometheus, à qui il envoie des requêtes PromQL via l'API HTTP `/api/v1/query_range`. Si
 Grafana affiche « No data », le réflexe est de tester la même requête directement dans
 Prometheus pour savoir qui est en cause.
+
+**Le tableau, étape par étape.** Je dessine avant de projeter le schéma, parce qu'un dessin
+qui apparaît trait par trait s'imprime mieux qu'un schéma fini. Dans l'ordre : (1) à gauche,
+trois petites boîtes « cible » avec chacune une étiquette `/metrics` ; (2) au centre, une grosse
+boîte « Prometheus », découpée en trois cases, *scrape*, *TSDB*, *règles* ; (3) trois flèches de
+Prometheus vers les cibles, « pull HTTP, toutes les 15 s » sur l'une d'elles, en insistant sur le
+sens de la flèche : c'est Prometheus qui va chercher ; (4) à droite en haut, « Grafana », flèche
+de Grafana vers Prometheus, mot « PromQL » ; (5) à droite en bas, « Alertmanager », flèche de
+Prometheus vers lui, mot « alertes », puis une flèche vers « Teams, Slack » ; (6) en bas à
+gauche, « découverte de services », flèche vers Prometheus, « qui scraper ? ». Puis je projette
+le schéma du deck : « c'est le même, en propre ». En fin de journée, un stagiaire refait ce
+dessin au tableau devant les autres.
+
+**Les labels, avec une image.** Un classeur avec des intercalaires. La métrique, c'est le
+classeur, `http_requests_total`. Chaque label est un niveau d'intercalaires : par méthode, par
+route, par code. Une série, c'est une pochette au fond, une par combinaison : GET / produits /
+200, GET / produits / 500, POST / checkout / 201. Quand je pose une question, « combien de
+requêtes en erreur sur le checkout ? », Prometheus ouvre les bonnes pochettes et additionne.
+Un label, c'est donc **une question qu'on pourra poser plus tard**. Et la cardinalité, c'est le
+nombre de pochettes : trois méthodes, dix routes, cinq codes, cent cinquante pochettes, très
+bien. Un label `user_id` avec un million de valeurs : un million de pochettes par route et par
+code, le classeur ne ferme plus. On en reparle au module 6.
+
+**Vérification de compréhension (2 min, à main levée).** « `http_requests_total{method="GET"}`
+et `http_requests_total{method="POST"}` : une série ou deux ? » Deux. « Si j'ajoute un label
+`instance` avec deux valeurs ? » Quatre. « Le nombre de séries dépend du nombre de requêtes ou du
+nombre de combinaisons ? » Des combinaisons : cent millions de requêtes GET tiennent dans une
+seule série. C'est le point que les stagiaires venus des logs ont du mal à intégrer : une
+métrique ne grossit pas avec le trafic, elle grossit avec les dimensions.
+
+> **Anecdote — le p95 qui mentait.** Une équipe avait instrumenté ses latences avec un Summary,
+> par instance. Sur le dashboard, un panel faisait la moyenne des p95 des dix instances : 180 ms.
+> Le jour où une seule instance s'est mise à répondre en 4 secondes, la « moyenne des p95 » est
+> passée de 180 à 560 ms, rien d'alarmant. Les clients, eux, tombaient un coup sur dix sur
+> l'instance malade. Avec un histogramme, on additionne les buckets des dix instances et le p95
+> global dit la vérité : 4 secondes pour 10 % des requêtes. C'est pour ça qu'on ne prend plus de
+> Summary.
 
 ### Ce que je montre
 
@@ -408,6 +458,16 @@ Gatekeeper ; le script passe par `curl` et ne pose pas ce marqueur. Sur Windows,
 être dans le dossier du binaire (le `..\..\` du chemin). Sur Codespaces, l'onglet *Ports* affiche
 9090 tout seul.
 
+**Ce que je dis en corrigeant.** Je projette mon terminal, pas le corrigé écrit. « Deux
+exécutables : `prometheus`, le serveur, et `promtool`, l'outil de validation qu'on utilise toute
+la semaine ; le reste, c'est la licence. Le YAML : trois lignes utiles. `global` pour le rythme,
+`scrape_configs` pour la liste des jobs, un job avec une cible. Rien d'autre à installer : pas
+de base de données, pas de service, un binaire lancé dans un terminal. Les logs : la version,
+`listening on :9090`, `Server is ready`. Et le dossier `data` vient d'apparaître, avec `wal`, le
+journal, et `chunks_head`, la mémoire : Prometheus a créé sa base tout seul. » Question à poser :
+« si je supprime ce dossier, où sont les données ? » Nulle part, elles sont perdues, et c'est
+normal : rétention et sauvegarde, c'est mercredi.
+
 ### Exercice 1.2 — Lire une page /metrics (10 min)
 
 **Énoncé.** Prometheus se surveille lui-même : ouvrez http://localhost:9090/metrics.
@@ -429,6 +489,16 @@ Gatekeeper ; le script passe par `curl` et ne pose pas ce marqueur. Sur Windows,
 
 Je fais remarquer `# HELP` et `# TYPE` : n'importe quel langage peut produire ça avec un `printf`.
 
+**Ce que je dis en corrigeant.** Sur ma page /metrics projetée, Ctrl+F sur `# TYPE`. « Un
+counter : `prometheus_http_requests_total`, il ne fait que monter. Une gauge :
+`prometheus_tsdb_head_series`, le nombre de séries en mémoire, ça monte et ça descend. Un
+histogramme : `prometheus_http_request_duration_seconds`, regardez les suffixes, `_bucket` avec
+un label `le`, `_sum`, `_count` ; les bornes vont de 0,1 s à 120 s, et `+Inf` compte tout. Un
+summary : `go_gc_duration_seconds` avec un label `quantile` : les quantiles sont déjà calculés,
+on ne pourra pas les additionner entre deux serveurs. Sept cents lignes pour une seule cible :
+voilà l'échelle. Une machine avec Node Exporter, pareil ; une application, quelques centaines ;
+un cluster Kubernetes, des centaines de milliers. »
+
 ### Exercice 1.3 — L'interface et les premières requêtes (10 min)
 
 **Énoncé.**
@@ -444,6 +514,17 @@ Je fais remarquer `# HELP` et `# TYPE` : n'importe quel langage peut produire ç
 la requête : un sélecteur, une fenêtre de 5 minutes, la fonction `rate`. On ne va pas plus loin
 en PromQL aujourd'hui : `{label="valeur"}`, `!=`, `=~`, c'est tout ce qu'il faut pour cet
 après-midi.
+
+**Ce que je dis en corrigeant.** « Status → Configuration : Prometheus montre le fichier qu'il
+a réellement chargé, pas celui que vous croyez avoir écrit ; c'est le premier endroit où
+regarder quand une cible manque. TSDB status : combien de séries en mémoire, quelles métriques
+pèsent le plus ; on y revient mercredi. » Sur `up` : « 1, la cible répond ; 0, elle ne répond
+pas. La métrique la plus simple et la plus utile de Prometheus, elle existe pour chaque cible,
+et on alertera dessus. » Sur les filtres : « `{handler="/api/v1/query"}`, une seule série ;
+`{code=~"4..|5.."}`, une regex, ancrée, donc exactement trois caractères. Vous venez d'écrire du
+PromQL : un nom, des accolades, des conditions sur les labels. Demain on y ajoute des fonctions,
+c'est tout. » L'onglet Explain, sans insister : « il décompose la requête en étapes, utile quand
+une requête de vingt lignes ne fait pas ce qu'on veut ».
 
 ### Exercice 1.4 — Installer Grafana et le brancher (15 min)
 
@@ -467,6 +548,15 @@ comparera.
 paquets) et refuse de démarrer. Sur Codespaces, l'URL de la datasource reste `http://localhost:9090`
 : c'est Grafana qui interroge Prometheus, sur la même machine.
 
+
+**Ce que je dis en corrigeant.** « Grafana vient de créer sa base dans `data/grafana.db` : un
+fichier SQLite qui contient tout ce que Grafana sait, c'est-à-dire sa configuration. Pas une
+métrique. La datasource que vous venez de cliquer, c'est une URL et rien de plus : "quand on te
+demande des données, va voir là". Cet après-midi, cette même datasource sera écrite dans un
+fichier YAML lu au démarrage ; vous verrez un cadenas, et vous comprendrez le mot provisioning. »
+Dans Explore : « la même requête que dans Prometheus, le même résultat, mieux dessiné. Grafana ne
+calcule rien : il demande, il affiche. Retenez-le : quand Grafana affiche "No data", c'est
+Prometheus qu'on interroge d'abord. »
 
 ### Pas à pas — exercices 1.1 à 1.4, dans mon Codespace stagiaire
 
@@ -592,6 +682,23 @@ Sur mon binaire : je casse volontairement l'indentation d'une ligne, `./promtool
 refuse, je répare. `kill -HUP` et la ligne `Completed loading of configuration file` dans le
 terminal de Prometheus.
 
+**Le pipeline de relabeling, au tableau.** Une ligne horizontale, de gauche à droite :
+« découverte » → « relabel_configs » → « scrape » → « metric_relabel_configs » → « TSDB ». Sous
+« découverte », les labels bruts que Prometheus reçoit, préfixés `__meta_` et `__address__`. Sous
+`relabel_configs` : « on décide qui entre et sous quel nom », le videur. Sous
+`metric_relabel_configs` : « on décide quelles séries on garde », le tri à l'entrée de
+l'entrepôt, avant que ça coûte du disque. Je laisse le dessin : on s'en resert au TP 2 pour le
+Blackbox et à l'exercice 1.8.
+
+> **Anecdote — trois mois sans configuration.** Chez un client, quelqu'un avait modifié le
+> `prometheus.yml` pour ajouter un job, fait un reload, et oublié de vérifier. Une erreur
+> d'indentation. Prometheus avait gardé l'ancienne configuration, comme toujours, et l'avait
+> écrit dans ses logs, que personne ne lisait. Trois mois plus tard, un redémarrage pour une mise
+> à jour : Prometheus refuse de démarrer, configuration invalide. Un vendredi soir, et personne
+> ne se souvenait de la modification. Deux leçons, que le lab applique : `promtool check config`
+> avant chaque reload, et une alerte sur `prometheus_config_last_reload_successful == 0`, qu'on
+> écrit mercredi.
+
 ### Exercice 1.5 — Changer le rythme (15 min)
 
 **Énoncé.** Toujours sur le binaire.
@@ -617,6 +724,16 @@ terminal de Prometheus.
 Windows pour dire que `--web.enable-lifecycle` est ce qu'on activera systématiquement en
 conteneur : pas de `kill` dans un conteneur qu'on ne veut pas ouvrir.
 
+**Ce que je dis en corrigeant.** « Le `scrape_interval` au niveau du job surcharge celui de
+`global` : 15 secondes partout et 5 secondes sur une cible sensible. Mais deux fois plus de
+scrapes, c'est deux fois plus d'échantillons et de disque. Et un piège pour demain : si vous
+scrapez toutes les 60 secondes et que vous écrivez `rate(...[1m])`, la fenêtre ne contient qu'un
+point, et `rate` ne peut rien calculer. Fenêtre d'au moins quatre scrapes, toujours. » Sur le
+reload : « le signal HUP, c'est la méthode Unix : "relis ta configuration". Le POST sur
+`/-/reload`, c'est la même chose par HTTP, pour les conteneurs et les scripts. Dans les deux cas,
+cherchez la ligne `Completed loading of configuration file` : sans elle, rien n'a été
+rechargé. »
+
 ### Exercice 1.6 — Casser pour comprendre (10 min)
 
 **Énoncé.**
@@ -635,6 +752,13 @@ sans alerte.
 **Ce que je vérifie.** Que tout le monde a bien réparé avant le déjeuner. Les binaires restent
 lancés jusqu'à l'exercice 1.7.
 
+
+**Ce que je dis en corrigeant.** « Prometheus en marche est conservateur : une configuration
+cassée, il la refuse et garde la précédente. Au démarrage, il est intraitable : sans
+configuration valide, il ne démarre pas. Les deux comportements sont sains, mais le premier est
+silencieux : rien ne vous le dit, à part une ligne de log et une métrique à 0. C'est exactement
+le genre de chose qu'on ne voit pas si on n'alerte pas dessus. » Puis : « qui, chez vous, saurait
+aujourd'hui si la dernière modification de son outil de supervision a été prise en compte ? »
 
 ### Pas à pas — exercices 1.5 et 1.6
 
@@ -696,6 +820,18 @@ des conteneurs.
 
 ![Ce matin en binaire, cet après-midi en conteneur](../../diagrams/binaire-conteneur.png)
 
+
+**Ce que je dis en corrigeant.** « Regardez ce que vous n'avez pas fait : vous n'avez pas
+téléchargé Prometheus, pas écrit la datasource, pas créé le dashboard d'accueil. Tout ça est
+dans des fichiers du dépôt, lus au démarrage. C'est l'infrastructure as code, et c'est comme ça
+qu'on livre une supervision en production : un `git clone`, un `up`, et tout est là, identique
+sur chaque poste. La différence avec ce matin tient en trois lignes de compose : l'image à la
+place du binaire, un montage à la place du chemin, un volume à la place du dossier `data`. Rien
+d'autre : un conteneur, c'est un binaire dans une boîte, pas de la magie. » Sur le DNS :
+« `prometheus:9090`, c'est le nom du service dans le compose. Docker tient un DNS interne :
+chaque service est joignable par son nom depuis les autres. `localhost` dans un conteneur, c'est
+le conteneur lui-même, donc rien. C'est l'erreur numéro un des débutants en Docker, et vous venez
+de la voir avant de la faire. »
 
 ### Pas à pas — exercice 1.7
 
@@ -794,6 +930,20 @@ le relabeling devient indispensable.
 la Pushgateway les garde et Prometheus les scrape. Attention : elle ne les oublie jamais (pas
 de TTL) et elle transforme le pull en push avec tous ses défauts. Uniquement pour les batchs,
 jamais pour des services.
+
+**Comment je choisis un exporter (à faire noter).** Quatre questions, dans l'ordre. Le
+logiciel expose-t-il déjà du Prometheus nativement ? De plus en plus souvent oui : Kubernetes,
+Traefik, HAProxy, Vault, GitLab, RabbitMQ, MinIO. Sinon, existe-t-il un exporter officiel ou
+maintenu par le projet lui-même ? Sinon, un exporter communautaire du catalogue, avec des commits
+récents et des issues traitées ? Sinon seulement, on écrit le sien, une cinquantaine de lignes
+avec la bibliothèque cliente, ou le textfile collector si un script suffit.
+
+> **Anecdote — l'exporter maison.** Une équipe avait écrit son propre exporter PostgreSQL, en
+> Python, quatre cents lignes, avec des requêtes SQL qui verrouillaient des tables toutes les
+> quinze secondes. Six mois de maintenance, deux incidents de production causés par la
+> supervision elle-même. L'exporter officiel existait, faisait la même chose en mieux, et gérait
+> les verrous. Personne n'avait regardé le catalogue. Depuis, ma première question sur un nouveau
+> besoin est « qui l'a déjà fait ? ».
 
 ### Ce que je montre
 
@@ -953,6 +1103,49 @@ de vraies questions.
 **Ce que je vérifie.** Que le job `node` est bien dans le `prometheus.yml` de tout le monde :
 les dashboards de demain en dépendent.
 
+
+### Animer le TP 1, partie par partie
+
+**Avant de lancer (2 min).** Je lis la mise en situation à voix haute, je projette la slide TP 1,
+et je donne le cadre : « 55 minutes, cinq parties, en binôme si vous voulez. Je passe dans les
+rangs. Le corrigé de chaque partie est projeté quand les deux tiers de la salle y sont. »
+
+**Pendant la partie 1.** Je circule et je regarde deux choses : l'indentation du nouveau job
+(le `- job_name` aligné sur celui de `prometheus`), et le nom de cible `node-exporter:9100`, pas
+`localhost` : « on est dans Docker, localhost c'est le conteneur Prometheus lui-même ». Quand la
+moitié a sa cible UP, je corrige : « Regardez `node_uname_info` : le nom de machine est celui du
+Codespace, ou de la VM Docker Desktop sur un Mac. C'est important : le Node Exporter mesure la
+machine sur laquelle il tourne, pas celle que vous avez sous les doigts. »
+
+**Pendant la partie 2.** C'est la partie où je parle le plus. Les requêtes une à une au tableau,
+et pour la formule CPU je prends cinq minutes, avec le classeur : « `node_cpu_seconds_total`,
+c'est un compteur par cœur et par mode : le nombre de secondes passées en `idle`, en `user`,
+en `system`. `rate` sur 5 minutes donne la fraction du temps passée dans ce mode : 0,8 en
+`idle`, c'est 80 % d'oisiveté. `avg` fait la moyenne des cœurs. `1 moins`, ça donne le temps
+occupé. `× 100`, un pourcentage. » Je fais lancer le chaos CPU et je laisse regarder la courbe
+monter : « c'est votre première courbe qui bouge parce que vous avez fait quelque chose ».
+La comparaison charge / cœurs : « une charge de 2 sur 2 cœurs, c'est plein ; sur 16 cœurs,
+c'est le calme ». Piège : `node_load1` seule n'est pas un pourcentage.
+
+**Pendant la partie 3.** Le premier qui tape `docker compose up -d node-exporter` sans avoir
+sauvegardé le fichier me sert d'exemple : « rien ne change, parce que le fichier n'est pas
+enregistré ». Le `$$` de compose, je l'explique une fois au tableau : « un seul dollar, compose
+essaie de remplacer une variable d'environnement ; deux, il laisse le dollar à la regex ».
+
+**Pendant la partie 4.** Je raconte l'anecdote des sauvegardes fantômes pendant qu'ils écrivent
+le fichier. Sous Windows, j'attends le premier `node_textfile_scrape_error` à 1 et j'explique le
+CRLF : « le collector lit le fichier ligne par ligne, et un retour chariot invisible en fin de
+ligne rend la valeur invalide ; tout le fichier est rejeté, pas seulement la ligne ». Message :
+« une gauge avec un timestamp, c'est la façon la plus simple de savoir si un batch a tourné ; on
+alerte dessus mercredi ».
+
+**Pendant la partie 5.** Le dashboard 1860 : je le laisse s'ouvrir chez ceux qui ont Internet
+et je dis : « cinquante panels. Combien sont utiles ? Demain vous en construirez dix qui
+répondent à de vraies questions. » Puis je fais retirer le job `node-light` de ceux qui ont fait
+le bonus 1.8, et je vérifie chez chacun, en passant, que `node` est dans le `prometheus.yml`.
+
+**Correction finale (5 min).** Je projette le corrigé du guide partie par partie, en insistant
+sur les cinq requêtes de la partie 2 : ce sont les cinq panels du TP 4 demain.
 
 ### Pas à pas — TP 1
 
@@ -1319,6 +1512,57 @@ buckets = 120 000 séries pour une seule
 métrique. Réponse : on réduit les buckets (6 ou 7 bien choisis), on agrège avec des recording
 rules (jour 2), ou on passe aux native histograms.
 
+
+### Animer le TP 2, partie par partie
+
+**Avant de lancer (3 min).** Mise en situation à voix haute, slide TP 2, et le cadre : « une
+heure, cinq parties plus un bonus, la partie 2 est la plus longue. Ne restez pas bloqués plus de
+cinq minutes sur un TODO : levez la main. »
+
+**Pendant la partie 1.** Je fais lire `compose/03-shop-api.yml` à voix haute par quelqu'un :
+« pourquoi deux instances de la même image ? » Pour voir les labels `instance` et l'agrégation
+demain, et pour que le war game puisse en casser une seule. « À quoi sert `traffic` ? » À ce que
+les courbes bougent sans qu'on clique. Sur `/metrics`, je fais lister ce qui existe avec le
+classeur : `http_requests_total` avec trois intercalaires, `method`, `route`, `status`.
+
+**Pendant la partie 2.** C'est la partie où je circule le plus. Trois erreurs reviennent à
+chaque session, je les annonce avant : oublier `--build` (l'ancienne image repart, rien ne
+change) ; oublier `.labels(...)` avant `.inc()` sur un counter à labels (Python lève une
+exception, l'app ne démarre plus, `docker compose logs shop-api-1` le dit) ; mettre
+`PRODUCT_VIEWS.inc()` avant le test `if product not in PRODUCTS`. Pour la troisième, je fais la
+démonstration chez celui qui l'a faite : `curl localhost:5001/api/products/nimportequoi` dix fois
+avec des noms différents, puis `/metrics` : dix séries de plus. « N'importe qui sur Internet peut
+faire exploser votre Prometheus avec une boucle for. Le label est sûr parce que ses valeurs sont
+bornées par le catalogue, et seulement pour ça. » Le stock : « une gauge, parce que ça monte et
+ça descend, et on la `set()` depuis la valeur réelle plutôt que de la décrémenter : si le code
+et la métrique divergent, c'est la valeur réelle qui a raison ». Quand les deux tiers ont
+`shop_orders_total` sur `/metrics`, je projette `solutions/jour-1/app.py` depuis le démo et je
+laisse deux minutes pour comparer.
+
+**Pendant la partie 3.** Rapide. Je fais remarquer `REDIS_ADDR` dans la brique : « un exporter
+par instance de service, configuré par variable d'environnement, colocalisé ; en Kubernetes,
+c'est un sidecar dans le même pod ». La commande la plus utilisée est `incrby` : « chaque appel
+API incrémente un compteur dans Redis, c'est le code de la boutique ».
+
+**Pendant la partie 4.** Le moment clé de la journée. Quand la première personne a `probe_success`
+à 1, j'arrête shop-api-2 chez elle et je projette : « `up` du job shop-api passe à 0, `up` du job
+blackbox reste à 1, et `probe_success` passe à 0. Trois métriques, trois vérités : la cible ne
+répond pas à Prometheus, l'exporter répond très bien, et la sonde a échoué. Avec le Blackbox,
+`up` ne veut plus dire ce qu'on croit. » Je décortique les trois règles de relabeling au
+tableau, sur le pipeline dessiné ce matin. Ceux qui n'ont pas Internet ont `https://prometheus.io`
+en échec : « ça vous fait une alerte de test gratuite mercredi ».
+
+**Pendant la partie 5.** Je relance `./lab.sh batch` deux fois chez quelqu'un : « les valeurs
+changent, la Pushgateway ne garde que la dernière ; si le batch ne tourne plus jamais, la
+métrique reste, avec un timestamp qui vieillit : c'est exactement ce qu'on veut pour alerter ».
+Sur `honor_labels` : « le script pousse avec `job="backup"` et `instance="nightly"`. Sans
+`honor_labels`, Prometheus les écrase avec `job="pushgateway"` et renomme les originaux
+`exported_job` ; avec, il les respecte. » Sur `file_sd` : je fais changer le label dans le fichier
+et compter 30 secondes montre en main devant Target health : « voilà la découverte de services :
+un fichier, relu tout seul, qu'un script Ansible ou une CMDB peut écrire ».
+
+**Correction finale (5 min).** Je projette `solutions/jour-1/prometheus.yml` du démo, job par job,
+et je demande à chacun de compter ses jobs : six.
 
 ### Pas à pas — TP 2
 
