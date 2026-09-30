@@ -1,0 +1,22 @@
+# AUDIT — une stack de supervision « qui marche ». Trouvez tout ce qui ne va pas.
+# (Ce fichier n'est pas lancé : on le lit, on l'annote.)
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports: ["0.0.0.0:9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=3y
+      - --web.enable-admin-api
+      - --web.enable-lifecycle
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["0.0.0.0:3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin

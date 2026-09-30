@@ -1,83 +1,97 @@
 # Session Apicil (Lyon) — jeudi, la journée pratique
 
 Ce document remplace, pour le jeudi, le déroulé prévu dans « Session Apicil (Lyon) — déroulé sur
-21 h ». La situation : mercredi soir, on vient à peine d'attaquer l'instrumentation (module 6,
-TP 2). Le groupe est un groupe d'infrastructure, pas de développeurs : leur faire écrire les
-cinq TODO de `app.py` coûterait la matinée pour un bénéfice faible. Je leur **donne**
-l'application instrumentée et je consacre la journée à ce qu'ils utiliseront lundi : interroger,
-visualiser, casser, alerter.
+21 h ». La situation : mercredi soir, on vient à peine d'attaquer l'instrumentation (module 6).
+Le groupe vient de l'infrastructure, pas du développement. Je leur **donne** l'application
+instrumentée, et je leur ai dit que PromQL, aujourd'hui, une IA l'écrit très bien : je ne leur
+fais donc pas écrire de requêtes, je leur apprends à les **demander** et à les **vérifier**.
 
-Le principe de la journée tient en une phrase, que je dis à 9h00 : **aujourd'hui, vous ne codez
-pas, vous pilotez.**
+La journée a deux piliers, et tout le reste les sert :
 
-Horaires : 9h00–16h00, déjeuner d'une heure, deux pauses d'une demi-heure. Il reste **cinq heures
-de travail effectif**, dont environ 3h45 les mains sur le clavier.
+1. **Les tableaux de bord** (matin) : deux dashboards construits selon les méthodes que Google et
+   les praticiens recommandent (signaux dorés pour le service, USE pour le serveur), puis un
+   auto-audit sur la grille des bonnes pratiques.
+2. **L'alerting** (après-midi) : la même famille de besoins, traitée une fois avec Prometheus et
+   Alertmanager, une fois avec Grafana, pour qu'ils sentent la différence dans leurs mains, puis
+   un tableau comparatif qu'ils remplissent eux-mêmes.
+
+Et deux séquences courtes en fin de journée : un **audit** de configuration (bonnes pratiques
+Prometheus et sécurité, sous forme de jeu) et **Thanos express**.
+
+La phrase à dire à 9h00 : **aujourd'hui, vous ne codez pas, vous pilotez.**
+
+Horaires : 9h00–16h00, déjeuner d'une heure, deux pauses d'une demi-heure, soit **cinq heures
+de travail effectif**, dont environ quatre les mains sur le clavier.
 
 Supports :
 
 - **Stagiaires** : *Guide stagiaire — Dernier jour, version pratique*
-  (`docs/stagiaire/Guide-stagiaire-Jour-3-express.pdf`, et `jour-3-express.md` pour Notion). Il
-  remplace le guide du jour 3 pour aujourd'hui ; le guide du jour 3 reste la référence pour le
-  faire chez soi.
-- **Moi** : ce document, le deck habituel (je donne les numéros de slides à passer, le reste
-  je le saute), et mon Codespace de démonstration.
+  (`docs/stagiaire/Guide-stagiaire-Jour-3-express.pdf`, et `jour-3-express.md` pour Notion).
+- **Moi** : ce document, le deck (numéros de slides ci-dessous ; je saute tout le reste), mon
+  Codespace de démonstration.
+- **Dans le dépôt** (branche `formation-2026`) : `rattrapage/appliquer.sh` (le lab prêt),
+  `rattrapage/alerting/` (règles et Alertmanager du TP C), `rattrapage/audit/` (les trois
+  fichiers piégés), `rattrapage/thanos.sh` (Thanos en une commande).
 
 ## La journée en un coup d'œil
 
 | Heure | Durée | Séquence | Slides | Modalité |
 |---|---|---|---|---|
-| 9h00 | 20 min | Accueil, rattrapage en une commande, ce qu'on aurait codé | 41, 42 | Tous ensemble, script |
-| 9h20 | 15 min | Mission 0 — La chasse aux métriques | 22 | Individuel |
-| 9h35 | 55 min | Missions 1 à 8 — PromQL dans Grafana Explore | 48, 50, 53, 54 | Individuel, correction au fil de l'eau |
+| 9h00 | 15 min | Accueil, rattrapage en une commande | | Tous ensemble |
+| 9h15 | 25 min | Les bonnes métriques (Google SRE, RED, USE), PromQL avec l'IA, échauffement | 60, 61, 62 | Exposé court puis individuel |
+| 9h40 | 50 min | TP A — La boutique en quatre signaux dorés (étapes 0 à 2) | 66, 67 | Individuel |
 | 10h30 | 30 min | *Pause* | | |
-| 11h00 | 15 min | Grafana en 15 minutes, démo d'un panel de bout en bout | 59 à 65 | Démonstration |
-| 11h15 | 65 min | TP A — Dashboard serveur Linux | 66, 67 | Individuel |
-| 12h20 | 10 min | Le dashboard de la communauté (ID 1860), débrief TP A | | Tous ensemble |
+| 11h00 | 45 min | TP A — métier, finitions, crash test | 69 | Individuel |
+| 11h45 | 30 min | TP B — Le serveur en méthode USE, import du 1860 | 61 | Individuel |
+| 12h15 | 15 min | Auto-audit des dashboards, modèle de maturité | 68 | Binômes |
 | 12h30 | 60 min | *Déjeuner* | | |
-| 13h30 | 60 min | TP B — Dashboard de la boutique | 68, 69 | Individuel |
+| 13h30 | 10 min | Alerter sans épuiser les équipes | 82, 83, 84, 98 | Exposé |
+| 13h40 | 50 min | TP C — Prometheus et Alertmanager | 85, 86, 89 | Individuel, démo au début |
 | 14h30 | 30 min | *Pause* | | |
-| 15h00 | 35 min | TP C — Une alerte Prometheus, puis une alerte Grafana | 78, 81, 94 | Démonstration puis individuel |
-| 15h35 | 15 min | War game en binôme | 108 | Binômes |
-| 15h50 | 10 min | Ce qu'on n'a pas vu et où le trouver, lundi matin | 105, 109 | Tous ensemble |
+| 15h00 | 30 min | TP D — L'alerting de Grafana, tableau comparatif | 99, 100 | Individuel puis tous ensemble |
+| 15h30 | 15 min | Audit : trouvez les erreurs | 106, 107, 108 | Binômes, jeu |
+| 15h45 | 10 min | Thanos express | 113 | Démo, suivie par qui veut |
+| 15h55 | 5 min | Lundi matin | 117 | Tous ensemble |
 | 16h00 | | Fin, ferme | | |
 
-**Ce qui est sacrifié**, et je l'assume à voix haute à 9h00 comme à 15h50 : écrire
-l'instrumentation (TP 2), les recording rules et leurs tests (TP 3, les règles sont déjà en
-place grâce au rattrapage), les droits (2.30 à 2.33), le routage Alertmanager fin (TP 6 et 7),
-l'alerting Grafana en code (TP 8 partie 4), la sauvegarde (TP 9), Thanos (TP 10). Tout est dans
-le dépôt et dans les guides : faisable chez soi dans un Codespace.
+**Ce qui est sacrifié**, et je le dis à voix haute à 9h00 comme à 15h55 : écrire
+l'instrumentation, écrire du PromQL à la main, les recording rules (déjà en place), les droits
+Grafana, les notifications Teams réelles, la sauvegarde, le TP Thanos complet. Tout est dans le
+dépôt, avec les guides des jours 1 à 3.
 
 **Les points de contrôle.** Si je suis en retard, je coupe dans cet ordre, sans remords :
 
-1. Missions 7 et 8 (je les donne en correction directe, 3 minutes).
-2. L'étape 2 du TP A (CPU par mode, mémoire) devient un bonus.
-3. L'étape 3 du TP B (annotations) se fait en démonstration.
-4. La partie 2 du TP C se fait en démonstration, les stagiaires regardent l'Inbox.
+1. L'étape 5 du TP A (crash test) : je la fais en démonstration.
+2. Le TP B passe de 9 panels à 4 (CPU et mémoire, utilisation et saturation), plus l'import 1860.
+3. La partie 5 du TP C (silence) : démonstration de 2 minutes.
+4. La partie 4 du TP D (mute timing) : je la montre.
+5. Thanos : démonstration seule, sans que les stagiaires le lancent.
 
-Je ne coupe **jamais** le war game : c'est le moment dont ils se souviendront.
+Je ne coupe **jamais** l'audit : c'est le moment le plus vivant de l'après-midi, et c'est là que
+passent les bonnes pratiques de configuration et de sécurité.
 
 ---
 
-## Ce soir (mercredi) — 20 minutes
+## Ce soir (mercredi) — 25 minutes
 
-### Pas à pas — pousser le rattrapage sur GitHub
+### Pas à pas — pousser sur GitHub
 
-Sur mon Mac, Terminal :
+Je télécharge `formation-2026-jeudi-v2.bundle` dans le dossier `…/PROMETHEUS GRAFANA/2026/`, puis
+dans Terminal :
 
 ```bash
 cd "/Users/yparent/Documents/PERSO/YSYCloud/FORMATION/PROMETHEUS GRAFANA/2026/formation-observabilite-lab"
-git fetch ../formation-2026-jeudi.bundle formation-2026-formateur:formation-2026-formateur formation-2026:formation-2026 --update-head-ok --force
+git fetch ../formation-2026-jeudi-v2.bundle formation-2026-formateur:formation-2026-formateur formation-2026:formation-2026 --update-head-ok --force
 git push --force origin formation-2026 formation-2026-formateur
 ```
 
-Puis sur github.com, branche `formation-2026` : le dossier `rattrapage/` doit apparaître, avec
-`appliquer.sh`, et `docs/stagiaire/Guide-stagiaire-Jour-3-express.pdf`.
+Sur github.com, branche `formation-2026` : je dois voir `rattrapage/` avec `appliquer.sh`,
+`thanos.sh`, `alerting/`, `audit/`, et `docs/stagiaire/Guide-stagiaire-Jour-3-express.pdf`.
 
 ### Pas à pas — tester comme un stagiaire (10 min, à faire absolument)
 
 1. github.com → le dépôt → bouton vert **Code** → onglet **Codespaces** : je rouvre mon Codespace
-   « stagiaire » (celui sur la branche `formation-2026`). S'il n'existe plus : **Create codespace
-   on formation-2026**.
+   « stagiaire » sur `formation-2026` (ou **Create codespace on formation-2026**).
 2. Dans le terminal du Codespace, les trois commandes :
 
 ```bash
@@ -86,17 +100,20 @@ git checkout origin/formation-2026 -- rattrapage/
 bash rattrapage/appliquer.sh
 ```
 
-3. J'attends `10 / 10 cibles UP` et `Rattrapage terminé`. Compter 2 à 4 minutes la première
-   fois (construction de l'image de l'application).
-4. Onglet **PORTS** → 3000 → Grafana s'ouvre, `admin` / `formation`. Explore → `up` → 10 lignes.
+3. J'attends `10 / 10 cibles UP` (2 à 4 minutes la première fois).
+4. Onglet **PORTS** → 3000 → Grafana, `admin` / `formation`. Explore → `up` → 10 lignes.
+5. Je teste la commande de l'audit, qui doit répondre `FAILED … scrape timeout greater than scrape interval` :
 
-Si c'est bon ce soir, ce sera bon demain : le script est rejouable, il sauvegarde ce que les
-stagiaires ont déjà fait dans `rattrapage/sauvegarde-<date>/` et ne touche qu'aux fichiers du
-lab.
+```bash
+docker run --rm -v "$PWD/rattrapage/audit:/audit" --entrypoint promtool \
+  quay.io/prometheus/prometheus:v3.13.3 check config /audit/prometheus.yml
+```
 
 ### Pas à pas — préparer mon Codespace de démonstration
 
-Mon Codespace de démo est sur la branche `formation-2026-formateur` (avec les corrigés).
+Mon Codespace de démo est sur `formation-2026-formateur` (avec les corrigés). Si je peux, je le
+passe en **4 cœurs** (github.com → Codespaces → ⋯ → *Change machine type*) : il portera Thanos
+cet après-midi en plus du reste.
 
 ```bash
 git pull --ff-only || git reset --hard origin/formation-2026-formateur
@@ -104,14 +121,11 @@ bash rattrapage/appliquer.sh
 cp solutions/jour-2/dashboards/*.json grafana/dashboards/
 ```
 
-La dernière ligne fait apparaître, dans le dossier *Formation* de Grafana, les deux dashboards
-corrigés « TP 4 - Serveur Linux » et « TP 5 - Boutique en ligne ». Ce sont mes « résultats
-attendus » en direct, plus parlants que la capture de la slide. Je les ouvre une fois ce soir
-pour vérifier qu'ils se remplissent.
+La dernière ligne fait apparaître dans le dossier *Formation* de Grafana les dashboards corrigés
+« TP 4 - Serveur Linux » et « TP 5 - Boutique en ligne » : des exemples de résultats à montrer
+quand un stagiaire est perdu.
 
 ### Pas à pas — le message à poster demain à 9h00
-
-Je prépare ce message dans le chat de la session (Teams ou autre), prêt à envoyer :
 
 ```text
 Bonjour à tous ! Pour démarrer, dans le terminal de votre Codespace :
@@ -122,476 +136,255 @@ bash rattrapage/appliquer.sh
 
 Attendez "10 / 10 cibles UP" (2 à 4 minutes). Le guide du jour :
 docs/stagiaire/Guide-stagiaire-Jour-3-express.pdf (dans le dépôt, branche formation-2026)
+Gardez aussi un onglet ouvert sur l'IA de votre choix : on va s'en servir.
 ```
 
 ---
 
 ## 8h30 — Vérification
 
-- Mon Codespace de démo : `./lab.sh status`, Grafana ouvert, les deux dashboards corrigés se
-  remplissent.
-- Le deck ouvert en mode Présentateur sur la slide 41.
-- Onglets du navigateur, dans l'ordre : le deck, Grafana (démo), Prometheus (démo), Inbox (démo),
-  le dépôt GitHub.
-- Le tableau blanc : j'y écris les trois commandes du rattrapage, en gros.
+- Codespace de démo : `./lab.sh status`, Grafana ouvert.
+- Le deck en mode Présentateur, sur la slide 60.
+- Onglets, dans l'ordre : le deck, Grafana (démo), Prometheus (démo), Alertmanager (démo), Inbox
+  (démo), une IA (pour la démonstration de 9h25), le dépôt GitHub.
+- Au tableau, en gros : les trois commandes du rattrapage. Et à côté, préparé pour plus tard, un
+  tableau vide à deux colonnes « Alertmanager | Grafana » : on le remplira à 15h25.
 
 ---
 
-## 9h00 — Accueil et rattrapage (20 min)
+## 9h00 — Accueil et rattrapage (15 min)
 
 ### Ce que je dis
 
-> « Bonjour à tous. Hier, on a vu ensemble le concept d'instrumentation : une application qui
-> expose elle-même ses métriques, avec une bibliothèque cliente. On s'est arrêté au moment où il
-> fallait écrire le code. Je vous propose un changement de programme : vous êtes des gens
-> d'infrastructure, pas des développeurs. Lundi, vous n'écrirez pas l'instrumentation de vos
-> applications, ce sont vos développeurs qui le feront. Vous, vous allez **exploiter** ce
-> qu'elles exposent : interroger, construire des tableaux de bord, alerter. Donc aujourd'hui,
-> je vous donne l'application déjà instrumentée, et on passe la journée à piloter. Vous ne codez
-> pas, vous pilotez. »
+> « Bonjour à tous. On s'est arrêté hier sur l'instrumentation : une application qui expose
+> elle-même ses métriques. Je vous propose un changement de programme. Vous êtes des gens
+> d'infrastructure : lundi, ce n'est pas vous qui instrumenterez les applications, ce sont vos
+> développeurs. Et PromQL, je vous l'ai dit, une IA l'écrit très bien, à condition de savoir le
+> lui demander et de vérifier ce qu'elle rend. Donc aujourd'hui, je vous donne l'application
+> déjà instrumentée, et on passe la journée sur ce que vous ferez vraiment : des tableaux de bord
+> qui parlent, des alertes qui servent. Vous ne codez pas, vous pilotez. »
 
-> « Le programme : ce matin, on apprend à poser des questions à Prometheus, directement dans
-> Grafana, puis on construit un vrai tableau de bord pour un serveur Linux. Cet après-midi, le
-> tableau de bord de la boutique, avec le chiffre d'affaires et la santé du service, puis des
-> alertes qui arrivent dans une boîte de réception. Et on finit par un jeu : vous allez casser
-> le lab de votre voisin, et il devra trouver la panne avec vos tableaux de bord. »
+> « Ce matin, deux tableaux de bord, construits avec les méthodes que Google recommande. Cet
+> après-midi, les alertes, deux fois : avec Prometheus et Alertmanager, puis avec Grafana, et
+> vous me direz lequel vous préférez et pour quoi. On finit par un jeu : un audit de
+> configuration où il y a au moins douze erreurs à trouver. Et cinq minutes sur Thanos, pour
+> savoir où aller quand un Prometheus ne suffit plus. »
 
-J'envoie le message préparé dans le chat et je montre les trois commandes au tableau.
+J'envoie le message préparé dans le chat.
 
 ### Pas à pas — le rattrapage, avec eux
 
-Je le fais **en même temps qu'eux**, dans mon Codespace stagiaire projeté, pour qu'ils voient ce
-qui doit s'afficher.
+Je le fais **en même temps qu'eux**, dans mon Codespace stagiaire projeté.
 
-1. Terminal du Codespace (s'il n'est pas visible : menu ☰ → *Terminal* → *New Terminal*).
+1. Terminal du Codespace (menu ☰ → *Terminal* → *New Terminal* s'il n'est pas visible).
 2. Les trois commandes. Je commente pendant que ça tourne :
    - « L'étape 1 sauvegarde ce que vous avez fait hier : rien n'est perdu. »
-   - « L'étape 3 active les briques 1 à 6 dans `docker-compose.yml` : Prometheus, Grafana,
-     l'application, le Node Exporter, les exporters, et l'Alertmanager qu'on utilisera cet
-     après-midi. »
-   - « L'étape 4 dépose le code de l'application terminé et la configuration de Prometheus
-     complète. »
-3. À la fin : `10 / 10 cibles UP`. Je fais lever la main de ceux qui l'ont.
+   - « L'étape 3 active les briques 1 à 6 : Prometheus, Grafana, l'application, le Node
+     Exporter, les exporters, et l'Alertmanager de cet après-midi. »
+   - « L'étape 4 dépose le code terminé de l'application et la configuration complète de
+     Prometheus. »
+3. `10 / 10 cibles UP` : je fais lever la main de ceux qui l'ont.
 
 **Ceux qui n'ont pas 10/10** :
 
 | Symptôme | Cause probable | Remède |
 |---|---|---|
-| `error: pathspec 'origin/formation-2026'` | le fetch n'a pas été fait, ou leur dépôt n'est pas celui de la formation | `git remote -v` ; si besoin `git fetch origin formation-2026` puis refaire le checkout |
+| `error: pathspec 'origin/formation-2026'` | fetch non fait, ou mauvais dépôt | `git remote -v` ; `git fetch origin formation-2026`, puis refaire le checkout |
 | `Docker ne répond pas` | Codespace qui vient de redémarrer | attendre 30 s, relancer le script |
-| `toomanyrequests` pendant le démarrage | limite Docker Hub (image Redis ou Grafana) | `docker login` avec un compte Docker Hub gratuit, relancer |
+| `toomanyrequests` | limite Docker Hub (Redis, Grafana) | `docker login` avec un compte Docker Hub gratuit, relancer |
 | 8 ou 9 cibles UP sur 10 | un conteneur encore en démarrage | relancer le script : il est rejouable |
-| `port is already allocated` | un binaire de mardi tourne encore, lancé d'un autre terminal | le script les arrête ; sinon fermer les anciens terminaux et relancer |
-| Codespace inaccessible, supprimé | | en recréer un sur `formation-2026` (bouton **Code**), puis seulement `bash rattrapage/appliquer.sh` |
+| `port is already allocated` | un binaire de mardi tourne encore | le script les arrête ; sinon fermer les vieux terminaux, relancer |
+| Codespace supprimé | | en recréer un sur `formation-2026`, puis seulement `bash rattrapage/appliquer.sh` |
 
-Pendant que les derniers terminent, je montre ce qu'ils auraient écrit.
-
-### Ce que je montre : le code qu'on n'écrira pas (slides 41 et 42)
-
-J'ouvre `apps/shop-api/app.py` dans le Codespace projeté, et je fais défiler en montrant les
-cinq blocs qui étaient des TODO. Je ne lis pas le code : je montre qu'il est **court**.
-
-> « Voilà les cinq trous que vous deviez combler. Regardez : chaque métrique, c'est une
-> déclaration de quatre lignes, et une ligne dans le code métier pour l'incrémenter. Ici
-> `ORDERS.labels(payment_method=...).inc()` : à chaque commande validée, le compteur prend +1.
-> C'est tout. Votre travail, lundi, ce sera de demander à vos développeurs : "est-ce que ton
-> application expose `/metrics` ? Et est-ce qu'il y a au moins le débit, les erreurs et la
-> durée ?" Si la réponse est oui, tout ce qu'on va faire aujourd'hui s'applique. »
-
-Comparaison que je donne : **les compteurs du tableau de bord d'une voiture.** Le développeur
-installe les capteurs (l'instrumentation). Vous, vous concevez le tableau de bord et vous réglez
-les voyants (Grafana, les alertes). Vous n'avez pas besoin de savoir souder un capteur pour
-savoir qu'il faut un voyant d'huile.
+Pendant que les derniers terminent, je montre le tableau « les commandes pour casser la
+boutique » en page 3 de leur guide : « Elles vont servir toute la journée. Un dashboard ou une
+alerte qu'on n'a jamais vus réagir à une panne, on ne sait pas s'ils marchent. »
 
 ---
 
-## 9h20 — Mission 0 : la chasse aux métriques (15 min)
+## 9h15 — Les bonnes métriques et PromQL avec l'IA (25 min)
 
-**Objectif.** Revoir les quatre types de métriques sur du concret, sans slide.
+### Slide 60 — Les quatre signaux dorés (5 min)
 
-Je projette la slide 22 (« Les quatre types ») trente secondes pour rappel, puis :
+Texte complet dans les notes de la slide. L'essentiel :
 
-> « Ouvrez le port 5001, et ajoutez `/metrics` à l'adresse. C'est exactement ce que Prometheus
-> vient lire toutes les 15 secondes : du texte. Chaque ligne, c'est une série. Mission 0 dans
-> votre guide : trouvez-moi un exemple de chacun des quatre types. Vous avez dix minutes. »
+> « Quand on ne sait pas quoi mettre dans un tableau de bord, on ne part pas des métriques
+> qu'on a : on part d'une méthode. La plus connue vient de Google. En 2016, Google publie
+> gratuitement le livre qui décrit comment ses équipes d'exploitation travaillent, *Site
+> Reliability Engineering*, sur sre.google. Chapitre 6 : si vous ne pouvez mesurer que quatre
+> choses sur un service utilisé par des gens, mesurez la latence, le trafic, les erreurs et la
+> saturation. »
 
-Astuce à donner : *Ctrl+F* dans la page, et chercher `# TYPE` : chaque métrique est précédée de
-sa ligne `# TYPE`.
+Je détaille chacun avec la comparaison de **la voiture** : la vitesse (le trafic), le voyant
+moteur (les erreurs), le temps de trajet (la latence), la jauge d'essence (la saturation).
+« Quatre informations, et on conduit. Le reste, c'est pour le garagiste. »
 
-### Correction (5 min)
+Deux subtilités que Google souligne et que je répète :
 
-| Type | Exemple | Labels | Ce qu'elle mesure |
-|---|---|---|---|
-| Counter | `http_requests_total` | method, route, status | le nombre de requêtes depuis le démarrage |
-| Counter | `shop_orders_total`, `shop_revenue_euros_total` | payment_method | commandes, chiffre d'affaires cumulés |
-| Gauge | `shop_stock_units`, `shop_cart_items`, `http_requests_in_progress` | product | un niveau qui monte et descend |
-| Histogram | `http_request_duration_seconds` (`_bucket`, `_sum`, `_count`) | route, le | la répartition des durées |
-| Summary | `shop_payment_duration_seconds` | quantile | la durée du paiement, quantiles calculés dans l'application |
+- **La latence des erreurs à part.** Une erreur 500 renvoyée en 2 ms fait baisser la latence
+  moyenne : on croit que ça va mieux, alors que ça va plus mal.
+- **La saturation est le seul signal qui prévient.** Les trois autres constatent.
 
-Les questions :
+### Slide 61 — Signaux dorés, RED, USE (3 min)
 
-1. **12 lignes** `_bucket` par route : 11 bornes (`0.005` à `10`) plus `+Inf`. `le="0.25"` veut
-   dire « nombre de requêtes qui ont duré **moins de** 0,25 s » (*less or equal*). Les buckets
-   sont **cumulatifs** : chaque marche contient les précédentes. Je dessine l'**escalier** :
-   une marche par borne, chaque marche plus haute que la précédente, la dernière (`+Inf`) égale
-   au total.
-2. `_total` est la convention pour un **compteur** : il ne fait que monter. Une gauge n'a pas de
-   suffixe.
-3. `shop_app_info` vaut toujours 1 : l'information est **dans les labels** (`version`,
-   `instance_name`). C'est le motif « info ». Utile pour afficher la version déployée dans un
-   dashboard, et surtout pour savoir, après un incident, quelle version tournait.
+> « RED, c'est la version microservices : les trois premiers signaux, sans la saturation, si
+> simple qu'on peut exiger le même dashboard pour les 200 services de l'entreprise. USE, c'est
+> l'autre côté : pas le service, la ressource. Brendan Gregg, l'ingénieur performance de Sun
+> puis de Netflix : pour chaque ressource, CPU, mémoire, disque, réseau, l'utilisation, la
+> saturation, les erreurs. »
 
-> **Anecdote — la version qui tournait.** Chez un client, un incident de nuit ; au post-mortem,
-> personne n'est capable de dire quelle version tournait à 2 h du matin : trois déploiements
-> dans la journée, des logs déjà purgés. Depuis, la première chose que je demande à une équipe,
-> c'est une métrique `_info` avec la version. Une ligne de code, et une question de moins à
-> chaque post-mortem.
+Au tableau, deux étages : en haut « le service » (signaux dorés), en bas « la machine » (USE),
+et une flèche de haut en bas. « Ce matin, TP A, l'étage du haut. TP B, l'étage du bas. Et un lien
+entre les deux. On alerte sur le haut, on diagnostique avec le bas. »
+
+### Slide 62 — PromQL : l'IA écrit, vous vérifiez (5 min)
+
+> « Je vous l'ai dit : PromQL, une IA l'écrit bien. Mais elle ne connaît pas **vos** métriques,
+> et elle se trompe avec beaucoup d'assurance. Deux compétences : bien demander, toujours
+> vérifier. »
+
+### Pas à pas — démonstration en direct (5 min)
+
+Je fais **devant eux** une demande à l'IA, dans l'onglet préparé :
+
+1. J'ouvre `http://…5001/metrics`, je cherche `# TYPE http_requests_total`, je copie les deux
+   lignes `# HELP` et `# TYPE` et trois lignes de valeurs.
+2. Je colle le modèle de demande de leur guide (page « PromQL avec l'IA ») en remplaçant la
+   dernière ligne par « le taux d'erreur 5xx en pourcentage, pour toute la boutique ».
+3. Je copie la réponse dans **Explore** (Grafana → Explore → Prometheus → mode *Code*). Si
+   l'IA a mis `$__rate_interval`, je le remplace par `5m` : Explore le comprend, mais c'est une
+   variable de dashboard.
+4. Les quatre vérifications, à voix haute : ça s'exécute ; l'ordre de grandeur (0 ou presque,
+   la boutique est saine) ; le compteur est dans un `rate` ; puis `./lab.sh chaos errors on`, et
+   j'attends une minute que la courbe monte. « Voilà : maintenant, elle est vérifiée. »
+   `./lab.sh chaos errors off`.
+
+Si l'IA se trompe pendant la démonstration, **tant mieux** : c'est la meilleure démonstration
+possible des quatre vérifications. Les erreurs classiques : un nom de métrique inventé
+(`http_server_requests_seconds_count`, le nom Spring Boot), la moyenne à la place du p95, un
+`sum` avant le `rate`, `status="500"` au lieu de `status=~"5.."`.
+
+La règle de sécurité, à dire lentement : « Chez un assureur, on ne colle jamais dans une IA
+publique des données de production : noms de clients, adresses internes, mots de passe. Ici, la
+boutique est fictive, on est tranquilles. Lundi, demandez à votre RSSI quel outil d'IA est
+autorisé. »
+
+### L'échauffement (7 min)
+
+> « À vous : une requête par signal doré, dans Explore, pour toute la boutique, avec vos quatre
+> vérifications. Notez la valeur actuelle dans votre guide. Sept minutes. »
+
+Valeurs attendues (pour circuler et vérifier d'un coup d'œil) :
+
+| Signal | Ordre de grandeur | Erreurs d'IA fréquentes |
+|---|---|---|
+| Trafic | 6 à 7 req/s | le compteur brut sans `rate` (des milliers, qui montent) |
+| Erreurs | 0 sans chaos | `status="500"` au lieu de `=~"5.."` ; pas de division (un débit, pas un taux) |
+| Latence p95 | 0,15 à 0,25 s | la moyenne `_sum / _count` ; `sum by (route)` sans `le` : « No data » |
+| Saturation | quelques % de CPU | `node_cpu_seconds_total` sans `rate` ; oubli du `1 -` (donne le CPU **libre**) |
 
 ---
 
-## 9h35 — Missions 1 à 8 : PromQL dans Grafana Explore (55 min)
-
-**Objectif.** Les huit formes de PromQL qui couvrent l'essentiel des dashboards, pratiquées
-dans l'outil qu'ils utiliseront (Grafana), pas dans l'interface de Prometheus.
-
-**Pourquoi Explore et pas Prometheus.** Parce que lundi, ils ouvriront Grafana, pas
-Prometheus. Explore, c'est le « brouillon » de Grafana : on tape une requête, on voit le
-résultat, sans créer de dashboard. Et ce qu'on met au point dans Explore se copie tel quel dans
-un panel cet après-midi.
-
-### Pas à pas — ouvrir Explore (je le fais projeté)
-
-1. Grafana (port 3000) → menu de gauche → **Explore**.
-2. En haut à gauche, la source : **Prometheus**.
-3. Dans l'éditeur de requête, à droite, bascule **Builder / Code** : je choisis **Code**. Le
-   Builder est pratique pour découvrir les noms de métriques, mais on apprend mieux en tapant.
-4. Je tape `up`, **Shift+Entrée** (ou le bouton *Run query*). En dessous : un graphique et une
-   table. Le sélecteur *Query type* (en bas de l'éditeur) : *Range* donne la courbe, *Instant*
-   donne la valeur actuelle.
-5. En haut à droite, la plage de temps : *Last 15 minutes*.
-
-### Le déroulé
-
-Je fais **trois mini-exposés de 5 minutes** pendant les missions, au moment où la majorité en a
-besoin. Le reste du temps, je circule. Je corrige chaque mission au tableau quand les deux tiers
-l'ont faite, en tapant la réponse dans mon Explore projeté.
-
-L'aide-mémoire des huit formes est dans leur guide, avant les missions. Je le montre et je dis :
-
-> « Vous n'avez pas à retenir PromQL par cœur. Ces huit formes, c'est 90 % de ce que vous
-> écrirez dans votre vie. Pour chaque mission, trouvez la forme qui correspond et adaptez-la.
-> C'est comme une recette de cuisine : on ne réinvente pas la pâte brisée, on la suit. »
-
-### Mission 1 — Qui est vivant ?
-
-**Correction.**
-
-```promql
-up
-up == 0
-count by (job) (up)
-```
-
-1. 10 séries. Chaque cible scrapée par Prometheus a une série `up` : 1 si le dernier scrape a
-   réussi, 0 sinon. C'est la seule métrique que Prometheus crée lui-même.
-2. `up == 0` ne renvoie **rien** quand tout va bien : « No data ». Je le souligne : « Une
-   comparaison en PromQL, ce n'est pas vrai ou faux, c'est un **tamis** : elle ne garde que ce
-   qui passe. Rien ne passe, rien ne s'affiche. Et retenez ça pour cet après-midi : une alerte,
-   c'est exactement cette requête-là. Si elle renvoie quelque chose, l'alerte sonne. »
-3. `count by (job)` : prometheus 1, node 1, shop-api 2, redis 1, pushgateway 1, blackbox-http 4.
-
-### Mini-exposé 1 — rate, le compteur kilométrique (slide 53, 5 min)
-
-Au moment de la mission 2, quand ils découvrent la courbe qui ne fait que monter.
-
-> « Un compteur, c'est le compteur kilométrique de votre voiture : 124 532 km. Est-ce que ça vous
-> dit si vous roulez vite ? Non. Ce qui vous intéresse, c'est le compteur de vitesse : combien de
-> kilomètres **par heure**, maintenant. `rate`, c'est ça : il prend le compteur kilométrique sur
-> les 5 dernières minutes, regarde de combien il a avancé, et divise par le temps. Résultat : une
-> vitesse, en requêtes par seconde. »
-
-Au tableau : une courbe en escalier qui monte (le compteur), et en dessous une courbe plate
-autour de 6 (le `rate`). Puis un redémarrage : le compteur retombe à zéro ; je montre que `rate`
-ne tombe pas, il détecte la remise à zéro et la corrige. « C'est pour ça qu'on ne calcule jamais
-une différence à la main sur un compteur. »
-
-Et la règle d'or : **`rate` d'abord, `sum` ensuite.** « On calcule la vitesse de chaque voiture,
-puis on additionne les vitesses. L'inverse n'a pas de sens : additionner des compteurs
-kilométriques de voitures qui ont démarré à des moments différents. »
-
-### Mission 2 — Combien de requêtes ?
-
-**Correction.**
-
-```promql
-rate(http_requests_total[5m])
-sum(rate(http_requests_total{job="shop-api"}[5m]))
-sum by (route) (rate(http_requests_total{job="shop-api"}[5m]))
-```
-
-Le total tourne autour de **6 à 7 requêtes par seconde** : c'est le générateur de trafic
-(réglé à 6 req/s, plus les scrapes et les sondes).
-
-### Mini-exposé 2 — sum by, le tableau croisé dynamique (slide 50, 5 min)
-
-> « Tout le monde a déjà fait un tableau croisé dynamique dans Excel ? `sum by (route)`, c'est
-> exactement ça : "mets la route en ligne, et additionne tout le reste". Les instances, les
-> méthodes, les codes : fusionnés. Il reste une ligne par route. `sum` tout court, sans `by`,
-> c'est la case "Total général" en bas à droite. »
-
-Au tableau : un tableau de 4 lignes (route, instance, valeur) et je montre les lignes qui
-fusionnent quand la colonne instance disparaît.
-
-### Mission 3 — Combien d'erreurs ?
-
-**Correction.**
-
-```promql
-sum(rate(http_requests_total{job="shop-api", status=~"5.."}[5m]))
-
-sum(rate(http_requests_total{job="shop-api", status=~"5.."}[5m]))
-/
-sum(rate(http_requests_total{job="shop-api"}[5m]))
-```
-
-1. Sans chaos : **rien** ou presque. L'application est saine.
-2. Le taux d'erreur, entre 0 et 1. `=~"5.."` : une regex, « commence par 5, suivi de deux
-   caractères ».
-3. Avec `./lab.sh chaos errors on` : 40 % des appels API échouent, mais le taux affiché monte
-   **progressivement** pendant 5 minutes et plafonne vers 30 à 35 %. Deux questions à leur
-   poser : pourquoi progressivement ? (la fenêtre de 5 minutes : au début, elle contient encore
-   surtout des minutes saines ; c'est une moyenne glissante). Pourquoi pas 40 % ? (`/health` et
-   `/metrics` ne tombent pas en panne, ils diluent le ratio).
-
-Je leur fais penser à `chaos errors off` : ça sert à la mission suivante.
-
-### Mini-exposé 3 — le p95 et l'escalier des buckets (slide 54, 5 min)
-
-> « Le temps de réponse moyen, c'est l'ennemi. Si 95 clients sont servis en 50 ms et que 5
-> attendent 10 secondes, la moyenne est à 550 ms : elle ne décrit personne. Ni les 95 contents,
-> ni les 5 furieux. Le p95, c'est : "95 % des requêtes sont plus rapides que ça". C'est la
-> promesse qu'on peut faire au client. »
-
-Puis l'escalier dessiné pendant la mission 0 : « `histogram_quantile` monte l'escalier jusqu'à
-la marche qui contient 95 % des requêtes, et fait une interpolation dans la marche. » La forme à
-recopier : **`histogram_quantile(0.95, sum by (le) (rate(..._bucket[5m])))`**. « Trois étages :
-`rate` pour avoir des vitesses, `sum by (le)` pour fusionner les instances en gardant les
-marches, `histogram_quantile` pour lire l'escalier. Le `le` doit **toujours** rester dans le
-`by`, sinon il n'y a plus d'escalier. »
-
-### Mission 4 — Est-ce que c'est lent ?
-
-**Correction.**
-
-```promql
-histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
-histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket[5m])))
-```
-
-1. Autour de 150 à 250 ms.
-2. `/api/checkout` est la plus lente, autour de 400 ms (le paiement). Pour les rapides :
-   `sort_desc(...)`.
-3. `chaos latency on` multiplie les temps de traitement par 10 : le p95 passe au-dessus de la
-   seconde en une à deux minutes.
-
-### Mission 5 — Et le business ?
-
-**Correction.**
-
-```promql
-sum(rate(shop_revenue_euros_total[5m])) * 3600
-sum(increase(shop_orders_total[1h]))
-bottomk(3, avg by (product) (shop_stock_units))
-```
-
-1. `rate` donne des euros **par seconde**, × 3600 donne des euros par heure. Autre réponse
-   juste : `sum(increase(shop_revenue_euros_total[1h]))`, « combien sur la dernière heure ».
-   Les deux diffèrent : l'un est une vitesse instantanée extrapolée, l'autre un cumul réel.
-2. `increase` = « de combien le compteur a avancé », c'est `rate` × la durée. Si le lab tourne
-   depuis moins d'une heure, `increase[1h]` extrapole : un nombre à virgule, c'est normal.
-3. Chaque instance a son propre stock : on moyenne par produit, ou on garde les deux instances.
-   Discussion utile : « Est-ce que c'est bien, un stock par instance ? Non, c'est un bug de
-   conception de l'application. Et c'est la métrique qui le révèle. »
-
-### Mission 6 — Le serveur
-
-**Correction.**
-
-```promql
-100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))
-100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
-```
-
-1. Le CPU, c'est la question piège du Node Exporter : il n'expose pas un pourcentage mais des
-   **secondes** passées dans chaque mode, par cœur. `rate` sur le mode `idle` donne la part du
-   temps où le cœur ne fait rien (entre 0 et 1). `1 −` donne la part occupée, `avg` fait la
-   moyenne des cœurs.
-2. `MemAvailable` et pas `MemFree` : Linux utilise la mémoire libre comme cache disque, et la
-   rend quand on en a besoin. `MemFree` est toujours bas et fait peur pour rien.
-3. `chaos cpu 120` lance, dans chaque instance de l'application, autant de processus qui
-   tournent à vide qu'il y a de cœurs : le CPU monte vers 100 % pendant 2 minutes, puis
-   redescend tout seul.
-
-> **Anecdote — le serveur à 98 % de mémoire.** Des années de tickets « mémoire critique » sur un
-> serveur de base de données, parce que la supervision regardait `MemFree`. Le serveur allait
-> très bien : Linux faisait son travail de cache. Le jour où on a basculé sur `MemAvailable`,
-> les alertes ont disparu, et personne n'a regretté les 400 tickets par an.
-
-### Mission 7 — Vu de l'extérieur
-
-**Correction.**
-
-```promql
-probe_success
-sort_desc(probe_duration_seconds)
-redis_up
-redis_connected_clients
-```
-
-Les quatre sondes réussissent (1). La plus lente : `https://prometheus.io`, la seule qui sort
-sur Internet. Le message : « Le Blackbox voit votre service **comme un client** : de
-l'extérieur. Si `up` vous dit que Prometheus arrive à lire les métriques, `probe_success` vous
-dit que la page répond. Ce ne sont pas les mêmes pannes. »
-
-`redis_up` = 1. Je pose la question qui servira au war game : « Si Redis tombe, `up` du job
-redis vaudra combien ? » Réponse : **toujours 1**. `up` parle de l'exporter, pas de Redis.
-C'est `redis_up` qui passe à 0.
-
-### Mission 8 — Le batch de la nuit
-
-**Correction.**
-
-```promql
-time() - backup_last_success_timestamp_seconds
-```
-
-Quelques dizaines de secondes après `./lab.sh batch`. Le motif est universel pour les tâches
-planifiées : on ne surveille pas « le batch tourne », on surveille « la dernière réussite date
-de quand ». L'alerte naturelle : `> 26 * 3600` pour un batch quotidien.
-
-### Si j'ai du retard à 10h15
-
-Je corrige les missions 7 et 8 directement, sans les faire faire : 3 minutes au lieu de 15.
-
----
-
-## 10h30 — Pause (30 min)
-
-Avant la pause : « Gardez vos requêtes quelque part. Cet après-midi, vous les réutiliserez. »
-
----
-
-## 11h00 — Grafana en 15 minutes
-
-Slides 59 à 65, **à vive allure** : ils ont déjà vu Grafana hier en passant, ce qui compte, c'est
-la démo.
-
-- Slide 60 (Grafana sous le capot) : « Grafana ne stocke rien. C'est une vitrine : il va
-  chercher les données dans Prometheus à chaque affichage. »
-- Slide 63 (Choisir la visualisation) : je la laisse affichée 1 minute, « c'est votre antisèche
-  pour la journée ».
-- Slide 64 (Ce qui rend un dashboard lisible) : les trois réglages. « Un dashboard sans unité,
-  c'est une réunion où quelqu'un dit "on est à 0,4" et où personne n'ose demander 0,4 quoi. »
-
-> **Anecdote — le dashboard du directeur.** On m'avait demandé « un dashboard pour le
-> directeur ». J'en ai livré un de 40 panels, magnifique. Il a regardé, et il a demandé : « Donc,
-> ça va ou pas ? » Depuis, la première rangée de chaque dashboard répond à cette question, en
-> quatre ou cinq chiffres avec des couleurs, et tout le détail est en dessous.
-
-### Pas à pas — démo d'un panel de bout en bout (7 min, projeté)
-
-Je construis **le panel « CPU utilisé » du TP A** devant eux, en expliquant chaque clic, puis je
-**jette** le dashboard (ils le refont eux-mêmes).
-
-1. **Dashboards → New → New dashboard → Add visualization** → source *Prometheus*.
-2. Éditeur de requête en bas, mode **Code** :
-   `100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[$__rate_interval])))`.
-   « `$__rate_interval` à la place de `[5m]` : Grafana choisit la fenêtre selon le zoom. Si vous
-   regardez 7 jours, il ne va pas calculer des moyennes sur 5 minutes. »
-3. À droite, en haut, le type : je commence en *Time series* (le défaut), puis je passe à
-   **Gauge**. « Même requête, autre visualisation. »
-4. Options à droite, champ de recherche en haut : je tape `unit` → *Percent (0-100)*. Puis
-   `min` 0, `max` 100.
-5. **Thresholds** : vert par défaut, j'ajoute 70 orange et 90 rouge.
-6. Titre : `CPU utilisé`. En haut à droite : **Back to dashboard**.
-7. Dans le terminal : `./lab.sh chaos cpu 60`. Je règle le rafraîchissement automatique (menu
-   à côté du bouton *Refresh*, 10 s). La jauge passe à l'orange puis au rouge : effet garanti.
-
-> « Voilà tout le métier : une requête, une visualisation, une unité, des seuils. Vous allez le
-> faire dix fois ce matin. »
-
----
-
-## 11h15 — TP A : le dashboard d'un serveur Linux (65 min)
-
-**Objectif.** Un dashboard paramétrable (une variable), lisible, avec cinq types de
-visualisation différents : Stat, Gauge, Time series, Bar gauge, State timeline.
-
-**Le choix pédagogique.** Les requêtes sont **données** dans leur guide. Le travail est dans
-Grafana : visualisation, unité, seuils, légendes, overrides. Ceux qui veulent chercher la
-requête eux-mêmes peuvent cacher la colonne.
-
-Slides 66 et 67 : la mise en situation, puis le résultat attendu. Mieux : j'ouvre le dashboard
-corrigé « TP 4 - Serveur Linux » dans mon Grafana de démo et je le laisse projeté pendant tout
-le TP. « Le vôtre aura quelques panels de moins, c'est normal. »
+## 9h40 — TP A : la boutique en quatre signaux dorés (50 min + 45 min)
+
+**Objectif.** Un dashboard de service qui répond en cinq secondes à « est-ce que ça va ? », puis
+montre quand, où, combien, puis ce qu'on vend. Toutes les visualisations clés : Stat, Time
+series, Heatmap, Pie chart, Bar gauge, Text, annotations, liens.
+
+Slides 66 (choisir la visualisation) et 67 (ce qui rend un dashboard lisible) : je les passe en
+2 minutes, puis je laisse la 66 projetée pendant le TP.
+
+> « Votre dashboard a trois étages, comme un immeuble. Au rez-de-chaussée, en haut de l'écran,
+> la réponse à "ça va ?" : quatre cases de couleur, une par signal doré. Au premier, les mêmes
+> signaux dans le temps, pour l'équipe technique. Au deuxième, le métier, pour le directeur
+> commercial. Chaque panel a une question en français dans votre guide : vous la posez à l'IA,
+> vous vérifiez, vous réglez l'affichage. Si vous bloquez plus de cinq minutes sur une requête,
+> il y a une annexe de secours à la fin du guide. Personne ne reste bloqué sur du PromQL
+> aujourd'hui : le sujet, c'est Grafana. »
 
 ### Pas à pas — la variable (je la montre, 3 min)
 
-C'est la seule étape que je montre, parce que c'est la plus déroutante :
+1. Dashboard vide, mode édition : **Add → Variable** (ou **Settings → Variables → New variable**).
+2. *Variable type* : Query. *Name* : `instance`. *Label* : `Instance`.
+3. *Query* : `label_values(http_requests_total{job="shop-api"}, instance)`.
+4. **Multi-value** et **Include All option** ; *Custom all value* : `.*`.
+5. *Preview of values* : `shop-api-1:5000`, `shop-api-2:5000`. **Back to dashboard**.
 
-1. Dans le dashboard vide, mode édition : barre latérale **Add → Variable** (ou **Settings →
-   Variables → New variable**).
-2. *Variable type* : Query. *Name* : `instance`. *Label* : `Serveur`.
-3. *Query* : `label_values(node_uname_info, instance)`.
-4. Cocher **Multi-value** et **Include All option** ; *Custom all value* : `.*`.
-5. En bas, *Preview of values* : `node-exporter:9100`. **Back to dashboard**.
-6. La liste déroulante « Serveur » apparaît en haut du dashboard.
+> « Dans chaque requête, `instance=~"$instance"`. Le `=~` parce que "All" devient `.*`, une
+> regex. Ajoutez cette consigne à votre demande à l'IA, elle le fera. »
 
-> « Dans chaque requête, on ajoutera `instance=~"$instance"`. Grafana remplace `$instance` par
-> ce qui est choisi dans la liste. Le `=~` au lieu de `=`, parce que quand on choisit "All", ça
-> devient `.*`, une regex. Ici, on n'a qu'un serveur ; chez vous, ce sera 200, et le même
-> dashboard servira pour les 200. »
+### Pas à pas — le premier Stat, de bout en bout (je le montre, 4 min)
+
+Le panel 1 (Trafic), projeté, en expliquant chaque clic :
+
+1. **Add → Visualization**, source *Prometheus*, mode **Code**, la requête (vérifiée dans
+   Explore).
+2. En haut à droite, visualisation **Stat**.
+3. Options, champ de recherche en haut : `unit` → *requests/sec (rps)*.
+4. `color mode` → **Background** ; `graph mode` → **Area**.
+5. *Thresholds* : pour le trafic, je choisis *Color scheme : Single color* bleu. « Le trafic
+   n'est ni bon ni mauvais : il ne doit jamais être rouge. Le rouge, c'est "il faut agir". »
+6. Titre `Trafic`, **Back to dashboard**, je le redimensionne en quart de largeur.
+
+Ensuite, ils font les trois autres.
 
 ### Pendant le TP : les pièges, dans l'ordre où ils arrivent
 
 | Piège | Symptôme | Ce que je dis |
 |---|---|---|
-| Requête en *Range* sur un Stat | ça marche, mais c'est lent | « Pour une valeur actuelle : *Instant* (sous la requête, *Options → Type*). » |
-| Unité oubliée | 0.137 au lieu de 13,7 % | « Percent (0-100) si la requête fait × 100, Percent (0.0-1.0) sinon. » |
-| Uptime en secondes brutes | 10234 | Unit *duration (dtdurations)* : « 2 hours, 50 minutes ». |
-| Panel 4, trois requêtes | une seule courbe | « Le bouton **+ Query** sous la première requête. » |
-| Panel 6, sans `scalar()` | No data | voir ci-dessous |
-| Bar gauge disque vide | tous les montages exclus | vérifier l'antislash : dans Grafana, on tape `tmpfs|overlay|squashfs` sans `\` |
-| State timeline tout vert, pas de texte | pas de mappings | *Value mappings → Add value mapping* : 1 → UP vert, 0 → DOWN rouge |
-| Panel 10 « No data » | pas de `or vector(0)` | voir ci-dessous |
-| Ils oublient de sauvegarder | tout est perdu au rechargement | « **Save dashboard**, toutes les 10 minutes. » (Ctrl+S / Cmd+S) |
+| Unité oubliée | 0.012 au lieu de 1,2 % | « Percent (0.0-1.0) si la requête donne un ratio, Percent (0-100) si elle multiplie par 100. » |
+| Seuils à l'envers | tout est rouge | les seuils se lisent de bas en haut : *Base* vert, puis orange à 0.01, rouge à 0.05 |
+| Latence « No data » | `sum by (route)` sans `le` | « Le `le`, c'est l'escalier des buckets : sans lui, plus d'escalier. » |
+| Heatmap grise | *Format : Heatmap* oublié | sous la requête : *Options → Format → Heatmap*, puis *Calculate from data : No* |
+| Pie chart d'une seule part | pas de `by (payment_method)` ou légende absente | légende `{{payment_method}}` |
+| Stock : 12 barres | pas d'`avg by (product)` | les deux instances ont chacune leur stock |
+| Oubli de sauvegarde | tout perdu au rechargement | « Ctrl+S / Cmd+S toutes les dix minutes. » |
 
-**La question du panel 6 (`scalar`).** À gauche de la division, une série par mode, avec un
-label `mode`. À droite, `count(...)`, une seule série sans aucun label. PromQL apparie les
-séries par labels identiques : aucune ne correspond, résultat vide. `scalar()` transforme la
-série de droite en simple nombre, qui divise tout le monde. Comparaison : « C'est comme vouloir
-faire une RECHERCHEV dans Excel avec une colonne qui n'existe pas dans l'autre tableau. »
+**La question du guide (étape 3) : pourquoi `rate` pour un montant ?** Parce que
+`shop_revenue_euros_total` est un compteur : tout ce qui a été vendu depuis le démarrage de
+l'application, qui repart à zéro à chaque redémarrage. `rate` × 3600 donne la **vitesse**, en
+euros par heure, maintenant. Comparaison : le compteur kilométrique contre le compteur de vitesse.
 
-**La question du panel 10 (`or vector(0)`).** `count(up == 0)` quand tout va bien : le tamis ne
-laisse rien passer, `count` de rien, c'est rien, donc « No data ». `or vector(0)` : « s'il n'y a
-rien, prends 0 ». Un 0 vert est rassurant, un « No data » est inquiétant : on ne sait pas si
-c'est « aucune panne » ou « la requête est cassée ».
+### 10h25 — avant la pause
 
-**Le test du TP (à faire faire vers 12h05) :** `docker stop shop-api-2`. En 15 à 30 secondes :
-la State timeline passe au rouge pour `shop-api / shop-api-2:5000`, et le panel « Cibles en
-panne » passe à 1 et au rouge. Question à poser : « La sonde Blackbox de `shop-api-2`, elle,
-est-elle rouge dans la State timeline ? » Non : `up` de la sonde reste à 1, parce que c'est le
-**Blackbox** que Prometheus scrape, et lui va bien. C'est `probe_success` qui passe à 0 (mission
-7). `docker start shop-api-2`.
+> « Là où vous en êtes, sauvegardez. Après la pause : l'étage métier et les finitions qui font
+> un dashboard professionnel. »
 
-### Point de contrôle à 12h00
+### 11h00 — la suite : l'étape 4, les finitions (je les montre, 5 min)
 
-Si la majorité n'a pas fini l'étape 1 : on saute l'étape 2 (elle devient un bonus) et on fait
-l'étape 3, qui est la plus spectaculaire (le test `docker stop`).
+C'est ce qui distingue un dashboard d'amateur d'un dashboard professionnel. Je montre les trois :
 
-### Pas à pas — le joker, pour celui qui est complètement perdu
+1. **Le panel Text** : *Add → Visualization → Text*, mode Markdown, trois lignes (voir le bloc
+   ci-dessous).
+   Je dis : « Le premier lecteur de ce dashboard, c'est quelqu'un d'astreinte, réveillé à 3 h,
+   qui ne l'a jamais vu. Trois lignes lui disent où il est et qui appeler. »
+2. **L'annotation Chaos** (slide 69) : *Add → Annotation query*. Je lance `./lab.sh chaos
+   errors on` : un trait rouge vertical sur toutes les courbes. « En post-mortem, la première
+   question est toujours : qu'est-ce qui a changé à ce moment-là ? Vos déploiements annotés, et
+   vous avez la réponse sans chercher. »
+3. **Le lien** vers le dashboard serveur, avec *Keep time range*. « Quand le haut est rouge, un
+   clic pour descendre d'un étage, sur la même période. »
 
-Uniquement pour un stagiaire en difficulté, pour qu'il puisse suivre la suite :
+Le texte du panel Text :
+
+```text
+**Boutique en ligne : santé et ventes.**
+Propriétaire : équipe Boutique · Astreinte : #boutique-astreinte
+En cas d'alerte : [runbook](https://github.com/yparent/formation-observabilite-lab)
+```
+
+> **Anecdote — le dashboard du directeur.** On m'avait demandé « un dashboard pour le
+> directeur ». J'en ai livré un de 40 panels, magnifique. Il a regardé, et il a demandé : « Donc,
+> ça va ou pas ? » Depuis, la première rangée de chaque dashboard répond à cette question, en
+> quatre chiffres colorés, et tout le reste est en dessous.
+
+**Le crash test (étape 5)** : `./lab.sh traffic 30`. La réponse attendue à « est-ce une
+panne ? » : **non**. Le trafic et la saturation montent, le chiffre d'affaires aussi, les erreurs
+et la latence restent vertes. « C'est le Black Friday qui se passe bien. Si votre dashboard avait
+une case rouge pour le trafic, on aurait réveillé quelqu'un pour une bonne nouvelle. C'est pour
+ça que le trafic est en bleu. »
+
+### Le joker, pour celui qui est complètement perdu
 
 ```bash
 git fetch origin
@@ -599,270 +392,379 @@ git checkout origin/formation-2026-formateur -- solutions/jour-2/dashboards/
 cp solutions/jour-2/dashboards/*.json grafana/dashboards/
 ```
 
-Dix secondes plus tard, les deux dashboards corrigés sont dans le dossier *Formation* de son
-Grafana. Il peut les ouvrir, les étudier, les modifier.
+Dix secondes plus tard, deux dashboards corrigés sont dans le dossier *Formation* de son Grafana.
+Ils ne sont pas organisés en signaux dorés, mais toutes les requêtes et tous les réglages y sont.
 
 ---
 
-## 12h20 — Le dashboard de la communauté, puis débrief (10 min)
+## 11h45 — TP B : le serveur en méthode USE (30 min)
 
-### Pas à pas — importer Node Exporter Full
+Je remontre la slide 61 dix secondes : l'étage du bas.
 
-1. **Dashboards → New → Import**.
-2. *Find and import dashboards…* : `1860` → **Load**.
-3. En bas, la source *Prometheus* → **Import**.
+> « Même exercice, pour la machine. Pour chaque ressource, trois questions : est-elle occupée
+> (utilisation) ? Est-ce que du travail attend (saturation) ? Y a-t-il des erreurs ? C'est la
+> méthode de Brendan Gregg, et elle a un avantage énorme : elle vous empêche d'oublier une
+> ressource. »
 
-(Si l'import par ID échoue, c'est qu'un proxy bloque grafana.com : ce n'est pas le cas dans
-Codespaces. Sur un poste d'entreprise, on télécharge le JSON sur grafana.com/grafana/dashboards
-et on utilise *Upload dashboard JSON file*.)
+### Les deux points à expliquer pendant le TP
 
-> « Voilà le dashboard le plus téléchargé de grafana.com. Des dizaines de panels. Il est très bien
-> pour enquêter. Maintenant, la question : si vous êtes d'astreinte, à 3 h du matin, et qu'on
-> vous appelle, vous ouvrez lequel ? Le vôtre, avec dix panels et des couleurs, ou celui-là ? »
+**La saturation CPU (panel 2) et le piège de l'IA.** La charge (*load average*) compte les
+processus qui veulent le CPU. 2 sur une machine à 2 cœurs : pile plein. 4 : la moitié attend.
+D'où « charge divisée par le nombre de cœurs ». Et l'IA propose presque toujours
+`node_load1 / count(node_cpu_seconds_total{mode="idle"})`, qui renvoie « No data » : à gauche,
+une série avec les labels `instance` et `job` ; à droite, un `count` sans aucun label. PromQL
+apparie les séries par labels identiques : rien ne correspond. La correction :
+`/ on (instance) count by (instance) (...)`. « C'est le meilleur exercice de la journée :
+donnez le message d'erreur à l'IA, elle se corrige. Travailler avec une IA, c'est une
+conversation, pas un distributeur. »
 
-Le message : **on commence toujours par un dashboard communautaire** (gratuit, éprouvé), et on
-construit **son propre dashboard de synthèse** pour la question « est-ce que ça va ? ».
-Rien n'empêche de les relier : c'est l'étape 3 du TP B (les liens).
+**La pression (PSI, panel 3).** Les noyaux Linux récents mesurent directement le temps pendant
+lequel des tâches **attendent** une ressource : c'est la saturation à l'état pur, sans calcul.
+Le Node Exporter l'expose (`node_pressure_*`). « Si vous ne retenez qu'une métrique de
+saturation pour Linux, c'est celle-là. »
 
-Débrief rapide : un tour de table, « le réglage que vous ne connaissiez pas ce matin et que vous
-utiliserez ». Réponses fréquentes : les unités, les value mappings, la variable.
+**`MemAvailable` et pas `MemFree`** : Linux utilise la mémoire libre comme cache disque et la
+rend à la demande. `MemFree` est toujours bas et fait peur pour rien.
+
+> **Anecdote — le serveur à 98 % de mémoire.** Des années de tickets « mémoire critique » sur un
+> serveur de base de données, parce que la supervision regardait `MemFree`. Le serveur allait
+> très bien : Linux faisait son travail de cache. Le jour où on est passé à `MemAvailable`, les
+> alertes ont disparu, et personne ne les a regrettées.
+
+**La chaîne complète**, à faire faire à 12h05 : `./lab.sh chaos cpu 120`. La case Saturation
+du dashboard Boutique passe à l'orange, un clic sur le lien, le dashboard serveur montre le CPU,
+la charge et la pression. « Voilà un diagnostic en deux clics. »
+
+### L'import du 1860 (5 min)
+
+**Dashboards → New → Import**, `1860`, *Load*, source Prometheus, *Import*. (Si un proxy bloque
+grafana.com : télécharger le JSON sur grafana.com/grafana/dashboards et *Upload dashboard JSON
+file*. Dans Codespaces, pas de problème.)
+
+> « Le dashboard le plus téléchargé de grafana.com. Des dizaines de panels. Parfait pour une
+> enquête de deux heures. À 3 h du matin, vous ouvrez le vôtre. On commence souvent par un
+> dashboard de la communauté, et on construit son propre dashboard de synthèse par-dessus. »
+
+---
+
+## 12h15 — Auto-audit des dashboards (15 min)
+
+Slide 68, le modèle de maturité de Grafana (2 min, texte dans les notes), puis :
+
+> « Grille de dix critères dans votre guide. Notez votre dashboard Boutique, honnêtement. Puis
+> échangez d'ordinateur avec votre voisin et notez le sien. Huit minutes. »
+
+Les critères viennent de la documentation Grafana (*Dashboard best practices*) et du chapitre 6
+de Google SRE. Au débrief (4 min), je fais lever les mains : « Qui a 8 ou plus ? » Puis les deux
+critères les plus souvent ratés, en général le 8 (annotations) et le 9 (lien vers le niveau
+suivant). « Ce sont les deux qui font gagner le plus de temps pendant un incident. »
+
+Dernière question avant le déjeuner : « Chez vous, vous êtes à quel niveau de maturité ? »
+Réponse habituelle : faible, avec un sourire. « Lundi, vous pouvez passer à moyen en une
+semaine. »
 
 ---
 
 ## 12h30 — Déjeuner
 
 « Laissez vos Codespaces ouverts. S'ils se mettent en veille, ils redémarrent avec la stack au
-retour : il faut juste attendre 30 secondes. »
+retour : attendez 30 secondes. »
+
+**Pour moi, à 13h25** : dans mon Codespace de démo, `bash rattrapage/thanos.sh on`. Ainsi, à
+15h45, le bucket aura déjà des blocs à montrer.
 
 ---
 
-## 13h30 — TP B : le dashboard de la boutique (60 min)
+## 13h30 — Alerter sans épuiser les équipes (10 min)
 
-**Objectif.** Un dashboard qui parle à deux publics (métier et technique), les trois signaux
-RED, la heatmap, et les annotations qui montrent les incidents sur les courbes.
+- **Slide 82 — Mauvaise alerte, bonne alerte.** « Google SRE, encore : on alerte sur un
+  symptôme, pas sur une cause. Et toute alerte qui réveille quelqu'un doit être urgente et
+  actionnable. Si la réponse à "qu'est-ce que je fais quand ça sonne ?" est "je regarde", ce
+  n'est pas une alerte, c'est un panel. »
+- **Slide 83 — 400 notifications par jour.** L'anecdote de la fatigue d'alerte (notes de la
+  slide).
+- **Slide 84 — Le budget d'erreur.** Je le présente comme « le niveau suivant », sans le
+  pratiquer : « On ne dit plus "plus de 5 % d'erreurs", on dit "au rythme actuel, on va rater
+  notre promesse du mois". C'est comme ça qu'on parle aux métiers. » Le détail est dans les
+  notes.
+- **Slide 98 — Alertmanager ↔ Grafana.** La correspondance des concepts. « Cet après-midi, vous
+  allez faire la même famille de choses deux fois, avec deux outils. Retenez ce tableau : les
+  concepts sont les mêmes, seuls les noms changent. La différence est ailleurs, et c'est vous qui
+  allez me la dire à 15h25. »
 
-Slides 68 et 69, puis le dashboard corrigé « TP 5 - Boutique en ligne » projeté dans mon Grafana
-de démo.
+---
 
-### Ce que je dis en lançant le TP
+## 13h40 — TP C : Prometheus et Alertmanager (50 min)
 
-> « Ce matin, vous avez fait un dashboard d'infrastructure : CPU, mémoire, disque. Vos
-> utilisateurs s'en moquent. Ce qui les intéresse, c'est : est-ce que je peux commander, est-ce
-> que c'est rapide. Et ce qui intéresse votre direction, c'est : combien on vend. Ce dashboard
-> met les deux sur le même écran. »
+**Objectif.** Comprendre les deux étages : Prometheus **évalue** les règles, l'Alertmanager
+**décide** qui prévenir, comment, quand. Lire des règles, prédire un routage, voir l'inhibition
+et le silence fonctionner.
 
-**RED au tableau.** J'écris verticalement R, E, D :
+Les fichiers sont **fournis** dans `rattrapage/alerting/` : ils les copient, les lisent, les
+modifient un peu. Personne n'écrit 80 lignes de YAML.
 
-- **R**ate : combien de demandes (le débit, `rate(http_requests_total)`) ;
-- **E**rrors : combien échouent (le ratio de la mission 3) ;
-- **D**uration : combien de temps (le p95 de la mission 4).
+### Partie 1 — Les règles (10 min) · slide 85
 
-> « Pour n'importe quel service, que ce soit une API, une base, une file de messages, ce sont
-> les trois premières questions. Si les trois sont bonnes, les utilisateurs sont contents. C'est
-> la méthode formalisée par Tom Wilkie (aujourd'hui chez Grafana Labs), et c'est la meilleure
-> grille de départ que je connaisse. »
+Je projette `rattrapage/alerting/alerts.yml` et je lis `ShopHighErrorRate` à voix haute :
 
-Comparaison : **le restaurant.** Rate : combien de clients entrent. Errors : combien de plats
-reviennent en cuisine. Duration : combien de temps entre la commande et l'assiette. Le patron
-regarde ces trois chiffres ; la température du four (le CPU), c'est pour le cuisinier.
+> « Une règle, c'est quatre choses. Une requête qui renvoie quelque chose quand ça va mal : le
+> tamis, tout ce qui dépasse 5 % passe. Un `for` : ça doit durer une minute, sinon on ignore. Des
+> labels : `severity` et `team`, c'est l'adresse sur l'enveloppe, l'Alertmanager ne lit que
+> ça. Des annotations : le texte de la lettre, avec le lien vers le runbook. »
 
-### Pendant le TP : les pièges
+**Correction des questions du guide :**
 
-| Piège | Ce que je dis |
+1. Symptômes : `ShopHighErrorRate`, `ShopCheckoutSlow`, `BlackboxProbeFailed`, et
+   `TargetDown` (à la limite : c'est l'absence de mesure). Cause : `HostHighCpuLoad`, et c'est
+   pour ça qu'elle est en `warning`.
+2. `for` : l'anti-faux positif, et le passage *Pending → Firing* (slide 86). `team` : sert
+   **uniquement** au routage.
+3. Réveille : `ShopHighErrorRate` (critical). Ne doit jamais réveiller : `HostHighCpuLoad`.
+
+### Partie 2 — L'arbre de routage (15 min) · slide 89
+
+Je dessine l'arbre **au tableau** à partir de `amtool config routes` :
+
+```text
+racine → inbox-default
+ ├── severity=critical → astreinte-teams   (continue: true)
+ ├── team=boutique     → boutique-slack
+ └── team=infra        → infra-inbox
+```
+
+> « L'alerte entre par la racine et descend. Elle s'arrête à la première branche qui lui
+> correspond, sauf si la branche dit `continue: true` : elle continue alors de descendre. C'est
+> un aiguillage de gare. Le `continue`, c'est la photocopie : l'astreinte reçoit l'original,
+> l'équipe reçoit une copie. »
+
+**Correction des prédictions :**
+
+| Labels | Receivers |
 |---|---|
-| Stat « Chiffre d'affaires » qui affiche un nombre énorme | « Vous avez mis le compteur brut : c'est tout ce qui a été vendu depuis le démarrage. On veut une vitesse, `rate` × 3600. » (c'est la question du guide) |
-| Pie chart avec une seule part | la légende n'a pas `{{payment_method}}`, ou la requête n'a pas le `by` |
-| Stock : 12 barres | pas d'`avg by (product)`, les deux instances sont affichées |
-| Heatmap toute grise | *Format : Heatmap* oublié sous la requête (*Options → Format*) ; puis *Calculate from data : No* dans les options |
-| Taux d'erreur à 0 en permanence | normal sans chaos ; c'est le moment de lancer `chaos errors on` |
-| Seuils du taux d'erreur invisibles | *Thresholds* à 0.05 **et** *Show thresholds : As lines and filled regions* |
+| `severity=critical team=boutique` | `astreinte-teams`, `boutique-slack` |
+| `severity=warning team=boutique` | `boutique-slack` |
+| `severity=warning team=infra` | `infra-inbox` |
+| `severity=critical` (sans team) | `astreinte-teams` |
+| `severity=info team=logistique` | `inbox-default` (aucune branche : la racine) |
 
-**La heatmap**, je la montre pendant le chaos latency : « Chaque colonne, c'est une minute.
-Chaque case, c'est une marche de l'escalier. La couleur, c'est le nombre de requêtes dans la
-marche. Quand on active la latence, vous voyez toute la masse **monter** : c'est la répartition
-qui se déplace, pas juste une moyenne. »
+Sans `continue: true`, la première ligne ne donne plus que `astreinte-teams` : l'équipe
+boutique ne sait pas que son site est en panne. « C'est l'erreur de routage la plus fréquente en
+production. »
 
-**Les annotations** (étape 3) : l'effet waouh de l'après-midi. Quand le chaos errors s'active,
-un trait rouge vertical apparaît sur **toutes** les courbes au même instant.
+La commande de test, qu'ils garderont : `amtool config routes test`. « On teste son routage
+**avant** la panne, pas pendant. »
 
-> « En post-mortem, la première question est toujours : "qu'est-ce qui a changé à ce
-> moment-là ?" Si vos déploiements sont annotés sur vos dashboards, vous avez la réponse sans
-> chercher. C'est la fonction la plus sous-utilisée de Grafana. »
+### Partie 3 — Casser et suivre (10 min)
 
-La requête d'annotation, `changes(shop_chaos_mode[1m]) > 0`, s'explique en une phrase : « dès
-qu'une gauge change de valeur, on met un trait ».
+`./lab.sh chaos errors on`. Chronologie attendue : *Pending* en 15 à 30 s ; *Firing* une minute
+après (le `for`) ; Inbox 10 s plus tard (`group_wait`). **Deux messages par groupe** : un en
+Teams (astreinte), un en Slack (boutique), à cause du `continue`. Les deux instances sont dans le
+**même** message : `group_by: [alertname, job]`. « Le regroupement : deux instances en panne, une
+seule notification. Avec 200 serveurs, c'est ce qui vous sauve la nuit. »
 
-### Pour les rapides : dashboards as code (démo en 3 minutes si j'ai le temps)
+Le *resolved* arrive jusqu'à une minute après la fin du chaos (`group_interval: 1m` ; en
+production, c'est souvent 5 minutes).
 
-*Export → Export as code* → copier le JSON → le coller dans `grafana/dashboards/tp-b-boutique.json`
-dans l'éditeur du Codespace → 10 secondes plus tard, il apparaît avec un cadenas dans la liste.
+### Partie 4 — L'inhibition (10 min)
 
-> « Votre dashboard est maintenant un fichier. On peut le mettre dans Git, le relire en merge
-> request, le déployer sur dix Grafana. C'est comme ça qu'on travaille en production : personne
-> ne modifie les dashboards à la main. »
+> « Le site est en erreur, l'astreinte est déjà réveillée. Est-ce qu'elle a besoin, en plus,
+> d'une alerte "le paiement est lent" ? Non : c'est du bruit. L'inhibition, c'est "si A sonne,
+> fais taire B". »
 
-### Point de contrôle à 14h20
+Ils ajoutent le bloc de six lignes, `check`, `reload`, puis chaos errors **et** latency. Au bout
+de deux minutes : `ShopCheckoutSlow` existe, mais apparaît **Inhibited** (ou *suppressed* dans
+`amtool alert query --inhibited`), et rien n'est arrivé dans l'Inbox pour elle.
 
-Si la majorité n'a pas fini l'étape 2 : je fais l'étape 3 (annotations) en démonstration
-projetée, et ils la recopient s'ils ont le temps après la pause.
+### Partie 5 — Le silence (5 min)
+
+Démonstration rapide dans l'interface de l'Alertmanager (bouton **New Silence**), matcher
+`team="boutique"`, 30 minutes, commentaire « Maintenance base de données ». « La différence avec
+l'inhibition : l'inhibition est une règle permanente dans la configuration ; le silence est
+ponctuel, posé par un humain, avec son nom et une raison, pour une durée. »
+
+À 14h28 : « `./lab.sh chaos reset`, et pause. »
 
 ---
 
 ## 14h30 — Pause (30 min)
 
-Avant la pause : « Après la pause, on fait sonner des alarmes. Remettez votre lab en ordre :
-`./lab.sh chaos reset`. »
-
 ---
 
-## 15h00 — TP C : alerter (35 min)
+## 15h00 — TP D : l'alerting de Grafana, et la comparaison (30 min)
 
-### Les concepts en 5 minutes (slides 78, 81, 94)
+Slide 99 (quand utiliser quoi), 1 minute, puis :
 
-- **Slide 78, Mauvaise alerte, bonne alerte.** « Une bonne alerte réveille quelqu'un pour
-  quelque chose que **les utilisateurs sentent**, et sur laquelle il peut **agir**. Le CPU à
-  90 %, ce n'est pas une alerte : c'est une information. Le taux d'erreur à 10 %, c'est une
-  alerte. »
+> « Le directeur commercial ne lira jamais un fichier YAML, et il veut pouvoir changer son seuil
+> lui-même. On va lui faire son alerte dans Grafana. Et on ne refait **pas** les alertes
+> techniques du TP C dans Grafana : la même alerte des deux côtés, c'est deux notifications,
+> deux vérités, et un jour l'une des deux est fausse. »
 
-> **Anecdote — les 400 notifications par jour.** (slide 79) Une équipe recevait 400
-> notifications par jour. Plus personne ne les lisait ; le jour où la vraie panne est arrivée,
-> elle était la 237e de la journée. Après nettoyage : 12 alertes, toutes sur des symptômes.
-> L'astreinte est redevenue vivable, et les pannes sont détectées plus vite.
+### Pas à pas — le premier contact point, projeté (2 min)
 
-- **Slide 81, Le cycle de vie.** Au tableau, trois cases : **Inactive → Pending → Firing**. « La
-  condition devient vraie : Pending. Elle reste vraie pendant la durée `for` : Firing, et la
-  notification part. Le `for`, c'est l'anti-faux positif : un pic d'une seconde ne réveille
-  personne. »
-- **Slide 94, Quand utiliser quoi.** Prometheus + Alertmanager pour les alertes sur les
-  métriques, versionnées dans Git ; Grafana pour les alertes sur d'autres sources (SQL, logs,
-  cloud) ou pour les équipes qui ne toucheront jamais un YAML. « Jamais la même alerte des deux
-  côtés, sinon vous recevez tout en double. »
+**Alerting → Notification configuration → Contact points → + Create contact point**, nom
+`equipe-commerce`, *Webhook*, URL `http://inbox:8080/webhook/commerce`, **Test**, **Save**.
 
-### Partie 1 — Une alerte Prometheus de bout en bout (10 min)
+> « Pourquoi `inbox` et pas `localhost` ? C'est Grafana qui envoie, depuis son conteneur. Pour
+> lui, `localhost`, c'est lui-même. Les conteneurs s'appellent par leur nom. »
 
-La règle `TargetDown` existe déjà dans `prometheus/rules/alerts.yml` ; le rattrapage a branché
-Prometheus sur l'Alertmanager. Je le fais **en même temps qu'eux**, projeté.
+Ensuite, ils font le reste seuls avec le guide.
 
-### Pas à pas — suivre TargetDown
-
-1. Trois onglets côte à côte : Prometheus (9090) → **Alerts** ; Alertmanager (9093) ; Inbox
-   (8080).
-2. Je montre la règle dans Prometheus → *Alerts* : `TargetDown`, `up == 0`, `for: 1m`,
-   *Inactive*, en vert.
-3. Terminal : `docker stop shop-api-1`. Je note l'heure au tableau.
-4. 15 à 30 s : *Pending* (orange) dans Prometheus.
-5. 1 min plus tard : *Firing* (rouge). L'alerte apparaît dans l'Alertmanager.
-6. 30 s plus tard (le `group_wait`) : la notification arrive dans l'Inbox.
-7. `docker start shop-api-1`. L'alerte disparaît de Prometheus en 30 s ; la notification
-   *resolved* arrive dans l'Inbox jusqu'à 5 minutes plus tard (le `group_interval`).
-
-**La question du guide : pourquoi 1 min 30 à 2 min de délai ?** Scrape (jusqu'à 15 s) +
-évaluation (jusqu'à 15 s) + `for` (1 min) + `group_wait` (30 s). Ce n'est pas un défaut, c'est
-**voulu** : on échange un peu de réactivité contre beaucoup moins de fausses alertes.
-Comparaison : **le détecteur de fumée** qui sonnerait au premier grille-pain. Tout le monde
-finirait par enlever la pile.
-
-### Partie 2 — Une alerte Grafana sur le taux d'erreur (20 min)
-
-Ils la font seuls avec le guide. Je montre juste le contact point, parce que l'URL est
-déroutante.
-
-### Pas à pas — le contact point (projeté, 2 min)
-
-1. **Alerting → Notification configuration → Contact points → + Create contact point**.
-2. *Name* : `inbox-grafana`. *Integration* : **Webhook**. *URL* :
-   `http://inbox:8080/webhook/grafana`. Je dis : « Pourquoi `inbox` et pas `localhost` ? Parce
-   que c'est Grafana qui envoie, depuis son conteneur. Pour lui, `localhost`, c'est lui-même.
-   Les conteneurs se parlent par leur nom, sur le réseau `formation-monitoring`. »
-3. **Test** → *Send test notification* → dans l'Inbox, une notification « TestAlert » arrive.
-4. **Save contact point**.
-
-Chez eux, dans la vraie vie : l'intégration **Microsoft Teams** à la place du Webhook, avec
-l'URL d'un workflow Teams. C'est le TP 7 du guide du jour 3, à faire chez soi.
-
-### Pendant la partie 2 : les pièges
+### Pendant le TP : les pièges
 
 | Piège | Ce que je dis |
 |---|---|
-| *Preview* en erreur de format, ou des courbes au lieu d'une valeur | la requête est en *Range* : passer en **Instant** |
-| La condition ne se déclenche pas | le seuil : la requête est en pourcentage (× 100), donc `5`, pas `0.05` |
-| Une seule alerte au lieu d'une par instance | le `sum by (instance)` a été oublié |
-| Pas de notification | le contact point n'est pas choisi dans la règle, ou le chaos n'est pas actif |
-| Tout est long | *Pending period* 1 min + intervalle 1 min : il faut 2 à 3 minutes, patience |
+| La règle reste en *Normal* | le seuil : *IS BELOW* la **moitié** de la valeur actuelle (environ 170 000 €/h dans le lab), et `./lab.sh traffic 1` |
+| *Preview* montre des courbes au lieu d'une valeur | requête en *Range* : passer en **Instant** |
+| La notification part vers `astreinte-grafana` | le label `team=commerce` manque sur la règle, ou le matcher de la politique est mal saisi |
+| Rien dans l'Inbox après *Firing* | *Group wait* par défaut de 30 s, plus l'intervalle d'évaluation : patience, 1 à 2 minutes |
 
-**Le résultat** : dans l'Inbox, deux notifications « Boutique - taux d'erreur élevé », une par
-instance ; sur le dashboard TP B, l'état de l'alerte apparaît sur le panel « Taux d'erreur ».
-`./lab.sh chaos errors off`.
+Le déclenchement : `./lab.sh traffic 1`. Le chiffre d'affaires tombe d'environ 170 000 à
+20 000 €/h en deux minutes, la règle passe *Pending* puis *Firing*, le message arrive dans l'Inbox
+sur le canal `commerce`. `./lab.sh traffic 6`.
 
-**La question du guide (Prometheus ou Grafana ?)** : la réponse attendue est « ça dépend », avec
-les critères de la slide 94. Chez Apicil, avec des équipes infra : Prometheus pour tout ce qui
-est métrique et doit être versionné, Grafana si l'alerte porte sur une base SQL ou des logs.
+### Le tableau comparatif, tous ensemble (7 min)
 
----
+Je remplis au tableau le tableau préparé le matin, **avec leurs réponses** :
 
-## 15h35 — War game en binôme (15 min)
+| | Prometheus + Alertmanager | Grafana |
+|---|---|---|
+| Où vit la configuration ? | des fichiers YAML | la base de Grafana (ou des fichiers de provisioning) |
+| Versionner, relire | Git, merge request, naturellement | export YAML, provisioning, Git Sync : possible, moins naturel |
+| Tester avant de déployer | `promtool test rules`, `amtool config routes test` | *Preview* dans l'interface |
+| Qui modifie ? | les équipes qui touchent au YAML | n'importe qui avec les droits sur le dossier |
+| Plusieurs sources (SQL, logs) | non, métriques Prometheus seulement | oui, toute source de données Grafana |
+| Si Grafana tombe | les alertes continuent | plus d'alertes |
+| Inhibition | oui | pas d'équivalent direct |
 
-Slide 108. C'est le moment le plus joyeux de la journée : je le présente comme un jeu.
-
-> « Par deux, sur un seul écran. L'un se retourne. L'autre tire une carte, tape la commande,
-> ferme le terminal. Celui qui s'est retourné a cinq minutes pour trouver la panne, avec vos
-> dashboards et Explore, rien d'autre. Pas le terminal, pas les logs. Puis on remet en ordre, et
-> on inverse. Remplissez la grille : je veux savoir **quoi**, **où**, **depuis quand**. »
-
-Règle à ajouter : **avant de jouer, décochez l'annotation « Chaos »** en haut du dashboard TP B,
-sinon le trait rouge avec « Chaos errors » donne la réponse.
-
-Je chronomètre au tableau : 5 minutes par manche, 2 manches, plus la remise en ordre.
-
-### Les solutions des cartes
-
-| Carte | Commande | Où ça se voit | Le piège |
-|---|---|---|---|
-| 1 | `./lab.sh chaos latency on` | TP B : p95 / p99, heatmap qui monte | aucun, c'est la carte facile |
-| 2 | `./lab.sh chaos errors on` | TP B : taux d'erreur à 30 % ; alerte Grafana dans l'Inbox | la fenêtre de 5 min : ça monte lentement |
-| 3 | `curl … 5002/chaos/errors/on` | taux d'erreur à 15-20 % seulement | il faut filtrer la variable `instance` sur `shop-api-2` pour voir 40 % |
-| 4 | `./lab.sh traffic 40` | débit × 6, CPU en hausse, chiffre d'affaires qui s'envole | ce n'est pas une panne : c'est le Black Friday. Bonne réponse : « rien de cassé, beaucoup de clients » |
-| 5 | `./lab.sh chaos cpu 180` | TP A : jauge CPU rouge, CPU par mode *user* ; la latence monte un peu | la saturation n'est pas encore une panne ; le chaos s'arrête seul au bout de 3 min (`chaos reset` ne l'arrête pas) |
-| 6 | `docker stop shop-api-1` | TP A : State timeline, « Cibles en panne » = 1 ; alerte TargetDown dans l'Inbox ; `probe_success` à 0 | le débit total baisse peu : l'autre instance absorbe |
-| 7 | `docker stop redis` | Explore : `redis_up` = 0 | `up{job="redis"}` reste à **1** : l'exporter va bien, c'est Redis qui est mort |
-| 8 | `./lab.sh chaos leak on` | Explore : `process_resident_memory_bytes{job="shop-api"}` qui grimpe | aucun dashboard ne le montre : c'est une fuite mémoire, elle finira en crash dans quelques heures |
-
-Le débrief (3 minutes) : « Qui a trouvé en moins de deux minutes ? Avec quel panel ? » Et la
-leçon des cartes 7 et 8 : « Un dashboard ne montre que ce qu'on a pensé à y mettre. Explore sert
-à tout le reste. »
+La conclusion, à dire : « Les alertes techniques, critiques, qui doivent survivre à tout :
+Prometheus et Alertmanager, dans Git, testées. Les alertes métier, multi-sources, ou pour des
+équipes qui vivent dans Grafana : Grafana. Les deux coexistent très bien, chacun sur son
+terrain. »
 
 ---
 
-## 15h50 — Clôture (10 min)
+## 15h30 — Audit : trouvez les erreurs (15 min)
 
-### Ce qu'on n'a pas vu, et où le trouver
+Juste avant : « Lancez `bash rattrapage/thanos.sh on`, il démarrera pendant l'audit. » (Si le
+Codespace est lent ou si le temps manque, on saute : je montrerai Thanos sur mon écran.)
 
-Slide 105 (Thanos), une minute :
+### Les slides 106 et 107, en 3 minutes
 
-> « Prometheus garde quinze jours par défaut, sur un seul serveur. Quand vous voudrez un an
-> d'historique, ou une vue sur plusieurs Prometheus, c'est Thanos, ou Mimir chez Grafana Labs.
-> Le TP complet est dans le guide du jour 3, il tourne dans un Codespace. »
+Je les passe **vite** : « Voilà les règles. Maintenant, on va voir si vous savez les appliquer. »
+Le texte complet est dans les notes.
 
-Puis la dernière page de leur guide du jour : le tableau « Ce qu'on n'a pas eu le temps de
-faire ». « Tout est dans le dépôt. Votre Codespace, vous pouvez le recréer quand vous voulez,
-gratuitement, sur la branche `formation-2026`. Les guides des trois jours sont dans
-`docs/stagiaire/`. »
+### Slide 108 — le jeu
 
-### Lundi matin (slide 109)
+> « Une équipe vous confie sa supervision. Elle vous dit : elle marche. C'est vrai, elle démarre.
+> Trois fichiers dans `rattrapage/audit/`. Par binôme, huit minutes, trouvez tout ce qui ne va
+> pas. Un point par erreur, un point de plus si vous proposez la correction. Il y en a au moins
+> douze. »
 
-> « Lundi matin, ne faites pas tout. Choisissez **un** service. Un seul. Vérifiez qu'il expose
-> des métriques, ou qu'il existe un exporter. Faites-le scraper. Construisez-lui une row RED :
-> débit, erreurs, latence. Puis **une** alerte, sur un symptôme que vos utilisateurs
-> sentiraient. C'est tout. Dans un mois, vous aurez dix services, parce que les collègues
-> viendront vous demander le même. »
+Chronomètre au tableau. À 8 minutes : la commande `promtool` de leur guide. Il ne trouve
+**qu'une** erreur, le `scrape_timeout`. « Voilà la différence entre un outil et vous : promtool
+vérifie la syntaxe, pas le bon sens. »
 
-Je leur fais remplir la dernière ligne de leur guide (« Mon service : … ») et je fais un tour de
-table express : un service chacun, à voix haute. Ça engage.
+Puis tour de table : une erreur par binôme, à tour de rôle, jusqu'à épuisement. Je coche dans la
+liste ci-dessous et je complète à la fin ce qui n'a pas été trouvé.
 
-Le mot de la fin, à 15h58 :
+### La liste complète
+
+**`docker-compose.yml`**
+
+| # | Erreur | Correction |
+|---|---|---|
+| 1 | `prom/prometheus:latest`, `grafana/grafana:latest` : versions non figées (et Docker Hub, limite de pulls) | version exacte, la LTS : `quay.io/prometheus/prometheus:v3.13.3`, `grafana/grafana:13.2.1` |
+| 2 | `0.0.0.0:9090` et `0.0.0.0:3000` : exposés sur toutes les interfaces, sans authentification | réseau interne ou `127.0.0.1`, reverse proxy avec SSO, `--web.config.file` (TLS, basic auth bcrypt) |
+| 3 | `--storage.tsdb.retention.time=3y` en local | 15 à 30 jours ; l'historique long, c'est Thanos ou Mimir |
+| 4 | `--web.enable-admin-api` ouvert à tous : n'importe qui peut supprimer des séries | le retirer, ou le protéger |
+| 5 | `--web.enable-lifecycle` sans authentification : n'importe qui peut arrêter Prometheus (`/-/quit`) | seulement derrière une authentification |
+| 6 | Aucun volume pour `/prometheus` : toutes les données perdues au premier redémarrage | un volume nommé, comme dans le lab |
+| 7 | Grafana sans volume : dashboards et utilisateurs perdus | volume `/var/lib/grafana`, et tout en provisioning |
+| 8 | `GF_SECURITY_ADMIN_PASSWORD=admin` : le mot de passe par défaut, en clair | un secret, via `GF_SECURITY_ADMIN_PASSWORD__FILE` |
+| 9 | Accès anonyme activé, **en rôle Admin** : n'importe qui administre Grafana | `GF_AUTH_ANONYMOUS_ENABLED=false`, SSO |
+
+**`prometheus.yml`**
+
+| # | Erreur | Correction |
+|---|---|---|
+| 10 | `scrape_timeout: 30s` supérieur à `scrape_interval: 15s` : Prometheus refuse de démarrer (la seule que promtool trouve) | timeout inférieur à l'intervalle, 10 s par exemple |
+| 11 | Pas d'`external_labels` (`cluster`, `replica`) | les ajouter : indispensable pour la HA, Thanos, la fédération |
+| 12 | Pas de bloc `alerting` : les règles s'évaluent, mais aucune alerte ne part nulle part | `alerting: alertmanagers: …` |
+| 13 | `scrape_interval: 1s` sur `app` : 15 fois plus d'échantillons, pour rien | 15 s |
+| 14 | `honor_labels: true` sur une application : la cible peut écraser `job` et `instance` | réservé à la Pushgateway et à la fédération |
+| 15 | Mot de passe en clair dans le YAML (qui finira dans Git) | `password_file` |
+| 16 | `insecure_skip_verify: true` : TLS sans vérification du certificat | `ca_file` avec l'autorité de l'entreprise |
+| 17 | Pas de `sample_limit` sur un exporter tiers | `sample_limit: 10000` par exemple |
+| 18 | Job `test2` : nom sans sens, adresses IP en dur, aucun label `env` / `team` | un nom parlant, du DNS ou `file_sd_configs`, des labels de routage |
+
+**`alerts.yml`**
+
+| # | Erreur | Correction |
+|---|---|---|
+| 19 | `CPU` : un compteur (`node_cpu_seconds_total`) comparé brut, sans `rate` : toujours vrai | `rate(...)`, et en % |
+| 20 | Une cause (le CPU) en `critical` : on réveille quelqu'un pour un serveur qui travaille | `warning`, ou mieux, alerter sur le symptôme (latence, erreurs) |
+| 21 | `valeur: "{{ $value }}"` en **label** : une nouvelle alerte à chaque évaluation, qui clignote et inonde | la valeur va dans une **annotation** |
+| 22 | Aucun `for` : la moindre pointe d'une seconde déclenche | `for: 5m` |
+| 23 | Aucune annotation : ni résumé, ni runbook | `summary`, `description`, `runbook_url` |
+| 24 | `ErreursBoutique` : `> 0` alerte dès la première erreur, sur `status="500"` seulement, sans ratio, une alerte par route et par méthode | le ratio 5xx par instance `> 0.05`, comme au TP C |
+| 25 | Pas de tests de règles | `promtool test rules` en CI |
+
+> **Anecdote — le Grafana public.** Des chercheurs en sécurité trouvent régulièrement, sur
+> Internet, des milliers de Grafana ouverts avec admin/admin et des Prometheus sans
+> authentification qui listent le nom de chaque machine interne d'une entreprise. Une métrique,
+> c'est une cartographie de votre système d'information offerte à qui la demande.
+
+Le binôme gagnant : applaudissements. C'est bête, et ça marche.
+
+---
+
+## 15h45 — Thanos express (10 min)
+
+Slide 113, sur mon Codespace de démo où Thanos tourne depuis 13h25.
+
+> « Un Prometheus garde quelques semaines, sur un seul serveur. Trois problèmes arrivent un
+> jour : je veux un an d'historique ; j'ai plusieurs Prometheus, un par site, et je veux une vue
+> globale ; je veux deux Prometheus jumeaux pour la haute disponibilité, sans voir tout en
+> double. Thanos répond aux trois, sans toucher aux Prometheus : on leur colle un **sidecar**. »
+
+### Pas à pas — la démonstration (5 min)
+
+1. Port **10902**, **Stores** : deux sidecars (`replica=prom-1`, `replica=prom-2`) et le Store
+   Gateway. « Deux Prometheus qui scrapent les mêmes cibles, comme deux caméras qui filment la
+   même scène. »
+2. `up{job="shop-api"}` : **2** séries. Je décoche **Use Deduplication** : **4**. « Le Querier
+   sait que `replica` distingue les jumeaux : il garde une seule copie. C'est pour ça qu'on a mis
+   des `external_labels` dès mardi, et que l'audit de tout à l'heure en demandait. »
+3. Le bucket, puisque Thanos tourne depuis deux heures :
+   `docker compose exec thanos-store ls /bucket` : des dossiers au nom étrange, un par bloc de 10
+   minutes. « En production, c'est un bucket S3 ou OVH Object Storage : quelques euros par mois
+   pour des années d'historique. »
+4. Grafana → Explore → source **Thanos** : la même requête. « Vos dashboards peuvent pointer
+   sur Thanos sans rien changer d'autre. »
+
+Ceux qui l'ont lancé refont les étapes 1, 2 et 4 chez eux, puis `bash rattrapage/thanos.sh off`.
+
+> « Les alternatives : Grafana Mimir et VictoriaMetrics, qui remplacent le stockage au lieu de le
+> compléter. Même API : Grafana ne voit pas la différence. Le TP complet est dans le guide du
+> jour 3. »
+
+---
+
+## 15h55 — Lundi matin (5 min)
+
+Slide 117.
+
+> « Lundi matin, ne faites pas tout. Choisissez **un** service. Un seul. Faites-le scraper,
+> donnez-lui ses quatre signaux dorés en haut d'un dashboard, et **une** alerte sur un symptôme
+> que vos utilisateurs sentiraient, avec un responsable et un runbook. C'est tout. Dans un mois,
+> vous aurez dix services, parce que vos collègues viendront vous demander le même. »
+
+Tour de table éclair : un service chacun, à voix haute (« Mon service : … » dans leur guide).
+Ça engage.
 
 > « Mardi matin, vous ne saviez pas ce qu'était une série temporelle. Aujourd'hui, vous avez
-> interrogé, visualisé, cassé, diagnostiqué et alerté sur une application que vous n'aviez
-> jamais vue. C'est exactement ce que vous ferez lundi. Merci à tous. »
+> construit deux tableaux de bord selon les méthodes de Google, monté deux systèmes d'alerte et
+> trouvé vingt erreurs dans la configuration d'une autre équipe. Les sources sont en dernière
+> page de votre guide, le dépôt reste ouvert. Merci à tous. »
 
 16h00 : fin.

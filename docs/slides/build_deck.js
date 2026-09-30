@@ -510,6 +510,20 @@ tp("TP 3", "Recording rules et tests unitaires", "Les panneaux débit, erreurs, 
 ], "20 minutes, déborde souvent sur 14h. Une règle non testée sonnera un dimanche pour rien.");
 
 section("MODULE 9", "Grafana", "Sous le capot, les quatre concepts, ce qui rend un dashboard lisible.");
+cards("Les quatre signaux dorés (Google SRE)", [
+  { n: 1, h: "Latence", p: "Le temps pour servir une requête. Séparer les réussies des échecs : une erreur rapide fausse la moyenne. On regarde le p95, pas la moyenne." },
+  { n: 2, h: "Trafic", p: "La demande : requêtes HTTP par seconde, transactions, sessions. Le contexte de tout le reste." },
+  { n: 3, h: "Erreurs", p: "Le taux de requêtes qui échouent : explicitement (5xx), implicitement (200 avec un mauvais contenu), ou par politique (plus lent que promis)." },
+  { n: 4, h: "Saturation", p: "À quel point le service est plein : la ressource la plus contrainte (CPU, mémoire, connexions, file d'attente). Prévient avant la panne." },
+], { grid: true, sub: "Site Reliability Engineering, chapitre 6 « Monitoring Distributed Systems » · sre.google/sre-book" });
+table("Signaux dorés, RED, USE : quelle grille pour quoi", ["Méthode", "Ce qu'on mesure", "Pour quoi", "Origine"], [
+  ["Signaux dorés", "Latence, trafic, erreurs, saturation", "Un service vu par ses utilisateurs", "Google SRE (2016)"],
+  ["RED", "Rate, Errors, Duration", "Chaque microservice, chaque API : simple et uniforme", "Tom Wilkie (Weaveworks, puis Grafana Labs)"],
+  ["USE", "Utilisation, Saturation, Erreurs", "Chaque ressource : CPU, mémoire, disque, réseau", "Brendan Gregg (2012)"],
+  ["Ce qu'on en fait jeudi", "TP A : la boutique en signaux dorés", "TP B : le serveur en USE", "Les deux dashboards se lient"],
+], { colW: [1.8, 2.7, 2.9, 1.6], size: 12, rowH: 0.55 });
+twoCol("PromQL : l'IA écrit, vous vérifiez", { h: "Bien demander", items: ["Donner le contexte : « Prometheus 3, Grafana, job=\"shop-api\" »", "Coller les lignes # HELP / # TYPE de /metrics : l'IA ne devine pas vos noms", "Dire ce qu'on veut voir : « le taux d'erreur 5xx en %, par instance »", "Demander $__rate_interval et le filtre instance=~\"$instance\"", "Jamais de données de production sensibles dans une IA publique"] },
+  { h: "Toujours vérifier", items: ["1. Elle s'exécute dans Explore, sans erreur", "2. L'ordre de grandeur est plausible (6 req/s, pas 60 000)", "3. Un compteur est dans un rate() ou un increase()", "4. Je casse (chaos) : la courbe bouge dans le bon sens", "Une requête qui n'a pas vu une panne n'est pas vérifiée"] }, { rightColor: C.navy });
 cards("Grafana, sous le capot", [
   { h: "Un serveur Go", p: "Une base SQLite (grafana.db) ou PostgreSQL. Il ne stocke que sa configuration : utilisateurs, sources, dashboards en JSON, règles. Pas une seule métrique." },
   { h: "Data source", p: "Une connexion. La nôtre est provisionnée par YAML : personne ne l'a cliquée." },
@@ -527,6 +541,11 @@ cards("Ce qui rend un dashboard lisible", [
   { n: 3, h: "Value mappings", p: "1 → UP en vert, 0 → DOWN en rouge. Lisible par quelqu'un qui ne connaît pas Prometheus." },
   { n: 4, h: "Légende et ordre", p: "{{route}} plutôt qu'un bloc de labels. En haut : « ça va ? ». En bas : le détail. 10-12 panels maximum." },
 ], { grid: true });
+cards("Dashboards : le modèle de maturité", [
+  { h: "Faible", p: "Des dashboards partout, copiés, modifiés à la main. Personne ne sait lequel est le bon. On « parcourt » pour trouver l'info. Pas de versionnage." },
+  { h: "Moyen", p: "Une méthode (signaux dorés, RED, USE), des variables au lieu des copies, des dossiers, des tags, des liens du général vers le détail." },
+  { h: "Élevé", p: "Tout est code (JSON, provisioning, Git Sync), relu comme du code. Le même dashboard pour chaque service. On arrive sur le bon écran depuis l'alerte." },
+], { sub: "Grafana, Dashboard best practices · grafana.com/docs" });
 twoCol("Variables, transformations, annotations", { h: "Variables", items: ["Un menu déroulant qui filtre tous les panels", "Query : label_values(node_uname_info, instance)", "Multi-valeur + All → =~ et non =", "Chaînées : $route dépend de $instance", "$__rate_interval, $__range, $__interval"] },
   { h: "Transformations et annotations", items: ["Merge, Organize fields, Sort by, Reduce, Filter, calculs", "Indispensables pour les tables", "Annotation : un trait vertical sur tous les graphiques", "changes(shop_chaos_mode[1m]) > 0, ou POST /api/annotations depuis la CI"] });
 tp("TP 4", "Un dashboard paramétrable pour un serveur Linux", "L'équipe d'exploitation veut un écran par serveur : d'un coup d'œil, savoir s'il va bien ; en dessous, le détail. Le même dashboard pour tous les serveurs, avec une liste déroulante.", [
@@ -584,6 +603,11 @@ twoCol("Mauvaise alerte, bonne alerte", { h: "Cause", items: ["« CPU > 90 % »"
   { h: "Symptôme", items: ["« Les clients attendent plus de 3 s »", "« 5 % des paiements échouent »", "Quelqu'un souffre, il faut agir", "Un runbook, un responsable, une sévérité"] },
   { rightColor: C.navy, note: "Google SRE : on alerte sur la douleur du client. Trois niveaux suffisent : critical (on réveille), warning (demain matin), info (ticket)." });
 statement("400 notifications par jour.\nLa nuit où la base est tombée, l'alerte est passée avec les autres.", "Après nettoyage : 12 alertes, toutes sur des symptômes, chacune avec un runbook. La fatigue d'alerte tue plus de systèmes que les pannes.");
+table("Alerter sur un budget d'erreur (Google SRE)", ["Vitesse de consommation", "Fenêtre longue", "Fenêtre courte", "Budget consommé", "Action"], [
+  ["14,4 × la normale", "1 h", "5 min", "2 %", "On réveille quelqu'un"],
+  ["6 × la normale", "6 h", "30 min", "5 %", "On réveille quelqu'un"],
+  ["1 × la normale", "3 jours", "6 h", "10 %", "Un ticket, demain matin"],
+], { colW: [2.2, 1.5, 1.5, 1.6, 2.2], size: 13, rowH: 0.5, sub: "Objectif 99,9 % sur 30 jours · The Site Reliability Workbook, chapitre 5 « Alerting on SLOs »" });
 code("Anatomie d'une règle", `groups:
   - name: shop-api
     rules:
@@ -679,6 +703,21 @@ cards("Déployer proprement", [
   { h: "Mode agent", p: "--agent : scrape et remote_write, sans stockage ni requêtes. Sites distants, edge. Grafana Alloy fait pareil (et logs, traces, OTLP)." },
   { h: "Conventions", p: "Nommage, labels env / team / service partout, un runbook par alerte, tests de règles en CI, tout provisionné." },
 ], { grid: true });
+cards("Configurer Prometheus proprement", [
+  { h: "Des intervalles sages", p: "15 à 60 s pour le scrape. 1 s multiplie tout par 15 pour rien. scrape_timeout inférieur à l'intervalle." },
+  { h: "Des labels qui identifient", p: "external_labels cluster et replica sur chaque serveur. env, team, service sur chaque cible. Jamais d'identifiant unique (user_id, request_id) en label." },
+  { h: "Des garde-fous", p: "sample_limit et label_limit sur les exporters tiers. metric_relabel_configs pour jeter l'inutile. honor_labels seulement pour Pushgateway et fédération." },
+  { h: "Valider avant de recharger", p: "promtool check config, check rules, test rules en CI. promtool trouve la syntaxe, pas le bon sens : relecture à deux." },
+  { h: "Une rétention raisonnable", p: "15 à 30 jours en local. Au-delà : Thanos, Mimir ou VictoriaMetrics, sur du stockage objet." },
+  { h: "Des versions figées", p: "Images et binaires en version exacte (la LTS), jamais latest. Mise à jour planifiée, testée, avec le changelog lu." },
+], { grid: true });
+twoCol("Sécuriser Prometheus et Grafana", { h: "Prometheus", items: ["Aucune authentification par défaut : jamais exposé tel quel", "web.config.file : TLS et basic auth (hash bcrypt), ou reverse proxy SSO", "--web.enable-admin-api seulement si nécessaire (supprime des séries)", "Secrets en *_file (password_file, bearer_token_file), jamais dans le YAML", "TLS vérifié vers les cibles : pas d'insecure_skip_verify"] },
+  { h: "Grafana", items: ["Changer le mot de passe admin au premier démarrage", "Pas d'accès anonyme, jamais en Admin", "SSO (OIDC, SAML, LDAP), équipes, droits par dossier", "Service accounts à jetons limités pour l'automatisation", "Sources de données en lecture seule, datasources provisionnées"] }, { rightColor: C.navy });
+tp("AUDIT", "Trouvez les erreurs", "Une équipe vous confie sa stack de supervision : « elle marche ». Trois fichiers dans rattrapage/audit/. Il y a au moins douze erreurs de configuration, de sécurité et d'alerting.", [
+  { h: "8 minutes", p: "Par binôme, annotez les trois fichiers. Une erreur = un point, une correction proposée = un point de plus." },
+  { h: "promtool", p: "Lancez promtool check config sur le fichier : combien d'erreurs trouve-t-il, lui ?" },
+  { h: "Correction", p: "Tour de table, une erreur chacun, jusqu'à épuisement." },
+], "15 minutes en tout. promtool n'en trouve qu'une (le timeout) : c'est la leçon.");
 exercises("Exercices 3.1 à 3.5 — diagnostic (10 min)", [
   ["3.1", "Séries actives, métrique et label les plus lourds"], ["3.2", "Échantillons par seconde, mémoire de Prometheus"], ["3.3", "Le job le plus cher, le plus lent"],
   ["3.4", "sample_limit: 100 sur redis : que devient up ?"], ["3.5", "?stats=all : brute contre recording rule"],

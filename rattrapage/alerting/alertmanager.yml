@@ -1,0 +1,70 @@
+# TP C (dernier jour) — alertmanager/alertmanager.yml, prêt à l'emploi
+#
+# Copier :    cp rattrapage/alerting/alertmanager.yml alertmanager/alertmanager.yml
+# Valider :   ./lab.sh check
+# Recharger : ./lab.sh reload
+# Tester le routage sans rien casser :
+#   docker compose exec alertmanager amtool config routes test severity=critical team=boutique
+#
+# Les « Teams » et « Slack » du lab sont simulés par l'Inbox (http://localhost:8080) :
+# en production, seule l'URL change.
+
+global:
+  resolve_timeout: 5m
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+# L'arbre de routage : chaque alerte entre par la racine et descend dans la première branche
+# dont les matchers correspondent (ou dans plusieurs si continue: true).
+route:
+  receiver: inbox-default          # si aucune branche ne correspond
+  group_by: ["alertname", "job"]   # une notification par alerte et par job, pas par série
+  group_wait: 10s                  # attendre 10 s pour grouper les alertes qui arrivent ensemble
+  group_interval: 1m               # délai avant d'envoyer les nouveautés d'un groupe (dont « resolved »)
+  repeat_interval: 4h              # rappel si l'alerte dure
+  routes:
+    # 1) Tout ce qui est critique part à l'astreinte... et on continue la descente
+    - matchers:
+        - severity = critical
+      receiver: astreinte-teams
+      continue: true
+
+    # 2) L'équipe boutique reçoit ce qui la concerne dans son canal Slack
+    - matchers:
+        - team = boutique
+      receiver: boutique-slack
+
+    # 3) L'infra reçoit ses alertes dans sa boîte
+    - matchers:
+        - team = infra
+      receiver: infra-inbox
+
+receivers:
+  - name: inbox-default
+    webhook_configs:
+      - url: http://inbox:8080/webhook/default
+        send_resolved: true
+
+  - name: astreinte-teams
+    msteamsv2_configs:
+      - webhook_url: http://inbox:8080/teams/astreinte
+        send_resolved: true
+
+  - name: boutique-slack
+    slack_configs:
+      - api_url: http://inbox:8080/slack/boutique
+        channel: "#boutique-alertes"
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}• {{ .Annotations.summary }}
+          {{ end }}
+
+  - name: infra-inbox
+    webhook_configs:
+      - url: http://inbox:8080/webhook/infra
+        send_resolved: true
+
+# TP C, partie 3 : les règles d'inhibition s'ajoutent ici
+inhibit_rules: []

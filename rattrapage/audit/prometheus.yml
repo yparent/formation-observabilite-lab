@@ -1,0 +1,29 @@
+# AUDIT — prometheus.yml. Trouvez tout ce qui ne va pas.
+global:
+  scrape_interval: 15s
+  scrape_timeout: 30s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: app
+    scrape_interval: 1s
+    honor_labels: true
+    static_configs:
+      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+
+  - job_name: base-clients
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: "Apicil2026!"
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ["db-exporter.interne:9187"]
+
+  - job_name: test2
+    static_configs:
+      - targets: ["10.0.12.41:9100", "10.0.12.42:9100", "10.0.12.43:9100"]

@@ -837,4 +837,95 @@ Merci pour ces trois jours. Le questionnaire d'évaluation, puis je reste pour v
 
 Questionnaire de fin, annexe A, correction à l'oral tout de suite. Rappel du questionnaire de satisfaction Sparks.`,
 
+
+"Les quatre signaux dorés (Google SRE)": `C'est la slide la plus importante de la journée : tout ce qu'on construit ensuite en découle.
+
+« En 2016, Google publie gratuitement le livre qui décrit comment ses équipes d'exploitation travaillent : Site Reliability Engineering, sur sre.google. Le chapitre 6 dit, en substance : si vous ne pouvez mesurer que quatre choses sur un service visible par des utilisateurs, mesurez celles-là.
+
+La latence : combien de temps pour servir une requête. Avec une subtilité que Google souligne : séparez les requêtes réussies des erreurs. Une erreur 500 renvoyée en 2 millisecondes fait baisser votre latence moyenne ; vous croiriez que tout va mieux alors que tout va plus mal. Et on regarde le p95, pas la moyenne, on a vu pourquoi.
+
+Le trafic : la demande. Des requêtes par seconde pour un site web, des transactions pour une base. C'est le contexte : 2 % d'erreurs sur 10 requêtes ou sur 10 000, ce n'est pas la même histoire.
+
+Les erreurs : le taux de requêtes qui échouent. Explicitement, les 5xx. Implicitement, un 200 avec une page vide. Et par politique : si vous avez promis une réponse en moins d'une seconde, une réponse en 3 secondes est une erreur.
+
+La saturation : à quel point le service est plein. La ressource la plus contrainte : CPU, mémoire, connexions à la base, taille d'une file. C'est le seul des quatre qui prévient avant la panne. »
+
+Comparaison : le tableau de bord d'une voiture. Vitesse (trafic), voyant moteur (erreurs), temps de trajet (latence), jauge d'essence (saturation). Quatre informations, et on conduit.
+
+Transition : « Ce matin, le dashboard de la boutique aura exactement ces quatre chiffres en haut. »`,
+
+"Signaux dorés, RED, USE : quelle grille pour quoi": `« Trois méthodes, qui se ressemblent, et qu'on confond souvent.
+
+Les signaux dorés, c'est la vue de l'utilisateur sur un service.
+
+RED, c'est la version simplifiée pour les microservices, proposée par Tom Wilkie : Rate, Errors, Duration. Les trois premiers signaux dorés, sans la saturation. L'intérêt : c'est tellement simple qu'on peut exiger le même dashboard pour chacun des 200 microservices de l'entreprise.
+
+USE, c'est l'autre côté : pas le service, la ressource. Brendan Gregg, l'ingénieur performance de Sun puis de Netflix, l'a formalisée en 2012 : pour chaque ressource, CPU, mémoire, disque, réseau, je regarde l'Utilisation (combien du temps elle est occupée), la Saturation (combien de travail attend), les Erreurs.
+
+La règle pratique : RED ou signaux dorés pour ce que vos utilisateurs voient, USE pour ce que vos serveurs vivent. On alerte sur le premier, on diagnostique avec le second. »
+
+Au tableau : deux étages. En haut « le service » (RED), en bas « les machines » (USE), et une flèche de haut en bas : « quand le haut est rouge, je descends voir le bas ».`,
+
+"PromQL : l'IA écrit, vous vérifiez": `« Je vous l'ai dit mardi : PromQL, aujourd'hui, une IA vous l'écrit très bien. Mais elle ne connaît pas vos métriques, et elle se trompe avec beaucoup d'assurance. Donc deux compétences : bien demander, et toujours vérifier.
+
+Bien demander : le contexte (Prometheus 3, Grafana, le job), les vraies métriques (copiez les lignes # HELP et # TYPE de la page /metrics, sinon elle invente des noms plausibles qui n'existent pas), ce que vous voulez voir, en français, avec l'unité. Et pour Grafana : $__rate_interval et le filtre sur la variable.
+
+Et une règle de sécurité : on ne colle pas de données de production sensibles, des noms de clients, des adresses internes, dans une IA publique. Chez un assureur, c'est la première question que la RSSI vous posera.
+
+Toujours vérifier, en quatre points. Un : ça s'exécute. Deux : l'ordre de grandeur est plausible ; si l'IA vous donne 60 000 requêtes par seconde sur notre petite boutique, elle a oublié un rate. Trois : tout compteur est dans un rate ou un increase. Quatre, le plus important : je casse, et je regarde la courbe réagir. Une requête qui n'a jamais vu une panne n'est pas vérifiée. »
+
+> Anecdote : l'IA qui avait inventé une métrique. Un stagiaire m'a montré une requête superbe, avec http_server_requests_seconds_bucket. Graphique vide. C'est le nom des métriques Spring Boot : l'IA avait deviné un framework. Depuis, je fais toujours coller les # TYPE.`,
+
+"Dashboards : le modèle de maturité": `« Grafana publie dans sa documentation un modèle de maturité en trois niveaux. Je vous demande de vous situer honnêtement.
+
+Faible : des dashboards partout, copiés d'un collègue, modifiés à la main. Il y en a trois qui s'appellent "Prod", personne ne sait lequel est le bon. On passe son temps à chercher. C'est là que sont 80 % des entreprises.
+
+Moyen : une méthode (on vient de voir les signaux dorés et USE), des variables plutôt que dix copies, des dossiers, des liens du général vers le détail. C'est ce qu'on fait aujourd'hui.
+
+Élevé : les dashboards sont du code, relus comme du code, déployés comme du code. Le même dashboard pour chaque service, généré. Et on n'y arrive plus en cherchant : on y arrive depuis l'alerte, qui contient le lien. »
+
+Question à la salle : « Chez vous, vous êtes à quel niveau ? » Réponse habituelle : faible, avec un sourire. « Lundi, vous pouvez passer à moyen en une semaine. »`,
+
+"Alerter sur un budget d'erreur (Google SRE)": `C'est le niveau suivant de l'alerting. Je le présente pour qu'ils sachent que ça existe, on ne le pratique pas.
+
+« Le deuxième livre de Google, The Site Reliability Workbook, propose une approche plus fine : on se fixe un objectif, par exemple 99,9 % de requêtes réussies sur 30 jours. Le 0,1 % restant, c'est le budget d'erreur : 43 minutes de panne totale par mois, qu'on a le droit de consommer.
+
+Au lieu d'alerter sur "plus de 5 % d'erreurs", on alerte sur la vitesse à laquelle on brûle ce budget. 14,4 fois la vitesse normale pendant une heure, c'est 2 % du budget du mois parti en une heure : on réveille quelqu'un. Une fois la vitesse normale pendant trois jours : on ouvre un ticket.
+
+Et la fenêtre courte, 5 minutes, sert à éteindre l'alerte vite : il faut que ça brûle encore maintenant, pas seulement sur l'heure passée. »
+
+Le message : « L'alerte n'est plus "est-ce que c'est cassé", c'est "est-ce qu'on va tenir notre promesse". C'est comme ça qu'on parle aux métiers. »`,
+
+"Configurer Prometheus proprement": `« Six règles de configuration, que vous allez chercher dans un fichier réel dans dix minutes.
+
+Des intervalles sages : 15 secondes, c'est le standard. 1 seconde, c'est 15 fois plus d'échantillons, 15 fois plus de disque, et vous ne verrez rien de plus. Et le timeout toujours plus petit que l'intervalle, sinon Prometheus refuse de démarrer.
+
+Des labels qui identifient : cluster et replica en external_labels, c'est ce qui a permis à Thanos de dédupliquer. env, team, service sur les cibles : c'est ce qui permet de router les alertes. Et jamais un identifiant unique en label : un user_id, c'est une série par client, un million de clients, un million de séries, Prometheus tombe.
+
+Des garde-fous : sample_limit sur un exporter que vous ne maîtrisez pas. S'il se met à exposer 200 000 séries, le scrape est refusé et up passe à 0 : vous le voyez, Prometheus survit.
+
+Valider : promtool, en CI. Mais promtool vérifie la syntaxe, pas le bon sens.
+
+La rétention : 15 à 30 jours en local. Au-delà, c'est le travail de Thanos.
+
+Des versions figées : la LTS, jamais latest. On en a parlé mardi. »`,
+
+"Sécuriser Prometheus et Grafana": `« Prometheus n'a aucune authentification par défaut. N'importe qui qui atteint le port 9090 lit toutes vos métriques, et avec l'API admin activée, peut les supprimer. Donc : jamais exposé tel quel. Soit le fichier web.config.file avec TLS et un mot de passe haché en bcrypt, soit, mieux, un reverse proxy avec le SSO de l'entreprise.
+
+Les secrets : jamais dans le YAML, qui finit dans Git. password_file, bearer_token_file : le secret est dans un fichier monté à part, géré par votre coffre-fort.
+
+Et vers les cibles : TLS vérifié. insecure_skip_verify, c'est désactiver la ceinture parce qu'elle gratte.
+
+Grafana : on change admin/admin au premier démarrage, et en provisioning, pas à la main. Pas d'accès anonyme, et surtout jamais en rôle Admin. Le SSO de l'entreprise, des équipes, des droits par dossier. Pour les scripts, des service accounts avec des jetons limités, pas le compte d'un humain. »
+
+> Anecdote : le Grafana public. Des chercheurs en sécurité trouvent régulièrement des milliers d'instances Grafana exposées sur Internet avec admin/admin, et des Prometheus ouverts qui listent les noms de toutes les machines internes d'une entreprise. Une métrique, c'est une cartographie de votre SI offerte à qui la demande.`,
+
+"AUDIT · Trouvez les erreurs": `Le jeu de fin d'après-midi. Je le lance avec énergie.
+
+« Une équipe vous confie sa supervision. Elle vous dit : elle marche. C'est vrai, elle démarre. Trois fichiers, dans rattrapage/audit. Par binôme, huit minutes, trouvez tout ce qui ne va pas. Un point par erreur, un point de plus si vous proposez la correction. »
+
+Au bout de 8 minutes, je fais lancer promtool (commande dans leur guide) : il n'en trouve qu'une, le scrape_timeout supérieur à l'intervalle. « Voilà la différence entre un outil et vous. »
+
+Puis le tour de table, une erreur par binôme, jusqu'à épuisement. La liste complète est dans mon déroulé.`,
+
 };

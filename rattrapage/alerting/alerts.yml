@@ -1,0 +1,70 @@
+# TP C (dernier jour) — prometheus/rules/alerts.yml, prêt à l'emploi
+#
+# Copier :    cp rattrapage/alerting/alerts.yml prometheus/rules/alerts.yml
+# Valider :   ./lab.sh check
+# Recharger : ./lab.sh reload
+#
+# Chaque règle = une requête PromQL qui renvoie quelque chose quand ça va mal (le « tamis »),
+# une durée (for), des labels (qui sert au routage) et des annotations (le message).
+
+groups:
+  - name: disponibilite
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "La cible {{ $labels.instance }} (job {{ $labels.job }}) ne répond plus"
+
+      - alert: BlackboxProbeFailed
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sonde en échec : {{ $labels.instance }}"
+
+  - name: boutique
+    rules:
+      # Symptôme : les clients reçoivent des erreurs (plus de 5 % de 5xx)
+      - alert: ShopHighErrorRate
+        expr: |
+          sum by (instance) (rate(http_requests_total{job="shop-api", status=~"5.."}[2m]))
+          /
+          sum by (instance) (rate(http_requests_total{job="shop-api"}[2m]))
+          > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          team: boutique
+        annotations:
+          summary: "Taux d'erreur élevé sur {{ $labels.instance }}"
+          description: "{{ $value | humanizePercentage }} des requêtes échouent (seuil 5 %)."
+          runbook_url: "https://github.com/yparent/formation-observabilite-lab/blob/formation-2026/docs/runbooks/shop-errors.md"
+
+      # Symptôme : les clients attendent (p95 du paiement au-dessus de 1 s)
+      - alert: ShopCheckoutSlow
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="shop-api", route="/api/checkout"}[2m]))
+          ) > 1
+        for: 1m
+        labels:
+          severity: warning
+          team: boutique
+        annotations:
+          summary: "Le paiement est lent (p95 = {{ $value | humanizeDuration }})"
+
+  - name: infrastructure
+    rules:
+      # Une cause, pas un symptôme : warning seulement, jamais de réveil la nuit pour ça
+      - alert: HostHighCpuLoad
+        expr: (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[1m]))) * 100 > 80
+        for: 1m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "CPU à {{ $value | printf \"%.0f\" }} % sur {{ $labels.instance }}"

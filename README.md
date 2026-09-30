@@ -107,6 +107,10 @@ Vos fichiers sont sauvegardés dans `rattrapage/sauvegarde-<date>/`.
 bash rattrapage/appliquer.sh
 ```
 
+Dans le même dossier : `alerting/` (règles et Alertmanager prêts pour le TP d'alerting),
+`audit/` (une configuration piégée à auditer) et `thanos.sh on|off` (la brique Thanos en une
+commande).
+
 ## Structure du dépôt
 
 ```

@@ -1,0 +1,15 @@
+# AUDIT — alerts.yml. Trouvez tout ce qui ne va pas.
+groups:
+  - name: alertes
+    rules:
+      - alert: CPU
+        expr: node_cpu_seconds_total{mode="user"} > 0.9
+        labels:
+          severity: critical
+          valeur: "{{ $value }}"
+
+      - alert: ErreursBoutique
+        expr: rate(http_requests_total{status="500"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
