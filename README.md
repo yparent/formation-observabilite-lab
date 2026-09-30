@@ -96,6 +96,17 @@ Un générateur de trafic (`traffic`) simule des clients en continu pour que les
 
 Même chose sous Windows avec `.\lab.ps1`.
 
+## Rattrapage : l'application déjà instrumentée
+
+Pour passer directement à l'exploitation (PromQL, dashboards, alertes) sans écrire
+l'instrumentation, une commande met le lab dans l'état « jour 1 terminé » : briques 01 à 06
+actives, application instrumentée, six jobs, Alertmanager branché, recording rules en place.
+Vos fichiers sont sauvegardés dans `rattrapage/sauvegarde-<date>/`.
+
+```
+bash rattrapage/appliquer.sh
+```
+
 ## Structure du dépôt
 
 ```
@@ -111,6 +122,7 @@ grafana/             provisioning (datasource, dashboards, alerting) + dashboard
 node-exporter/       textfile collector
 thanos/              configuration du stockage objet et du second Prometheus (TP 10)
 scripts/             batch Pushgateway
+rattrapage/          l'état « jour 1 terminé » en une commande (appliquer.sh)
 docs/                guides stagiaire (un par jour) et générateurs de supports
 ```
 

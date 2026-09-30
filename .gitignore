@@ -15,3 +15,4 @@ docs/build/package*.json
 install/bin/
 install/data/
 install/prometheus.yml
+rattrapage/sauvegarde-*/

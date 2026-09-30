@@ -192,6 +192,7 @@ def make_toc(items, pages=None) -> str:
 
 
 def postprocess(html: str) -> str:
+    html = html.replace("\\|", "|")  # pipe échappé dans un tableau Markdown (GFM / Notion)
     html = re.sub(r'<h3([^>]*)>Pas à pas', r'<h3\1 class="pap">Pas à pas', html)
     html = re.sub(r'(<h[1-6]) id="([^"]+)"', r'\1 id="h-\2"', html)
     # marqueur invisible (mais extractible) pour retrouver la page de chaque titre h1/h2
@@ -319,17 +320,19 @@ def build_formateur():
           "Formation Prometheus & Grafana", "Guide du formateur")
 
 
-def build_stagiaire(day: int):
+def build_stagiaire(day, label=None, pdf_name=None):
+    """day : 1, 2, 3 ou le nom d'un fichier jour-*.md (ex. "3-express")."""
+    label = label or f"Jour {day}"
     text = (DOCS / "stagiaire" / f"jour-{day}.md").read_text()
     m = re.match(r"# (.*?)\n\n\*\*(.*?)\*\*\n\n(.*?)\n\n(.*)", text, flags=re.S)
     title, subtitle, meta, rest = m.groups()
     body = postprocess(md_to_html("# " + subtitle + "\n\n" + rest))
     body = body.replace('src="img/', f'src="file://{DOCS / "stagiaire" / "img"}/')
     body = body.replace('src="../diagrams/', f'src="file://{DOCS / "diagrams"}/')
-    build(f"guide-stagiaire-jour-{day}", DOCS / "stagiaire" / f"Guide-stagiaire-Jour-{day}.pdf",
-          f"Guide stagiaire — Jour {day}", subtitle, "Formation Prometheus &amp; Grafana", body,
+    build(f"guide-stagiaire-jour-{day}", DOCS / "stagiaire" / (pdf_name or f"Guide-stagiaire-Jour-{day}.pdf"),
+          f"Guide stagiaire — {label}", subtitle, "Formation Prometheus &amp; Grafana", body,
           "<strong>Formateur</strong> · Yohan Parent", "<strong>Sparks</strong> · édition septembre 2026",
-          "Formation Prometheus & Grafana", f"Guide stagiaire · Jour {day}")
+          "Formation Prometheus & Grafana", f"Guide stagiaire · {label}")
 
 
 def build_session(name: str):
@@ -354,6 +357,9 @@ if __name__ == "__main__":
     if what in ("all", "stagiaire"):
         for d in (1, 2, 3):
             build_stagiaire(d)
+        build_stagiaire("3-express", "Dernier jour, version pratique", "Guide-stagiaire-Jour-3-express.pdf")
+    if what == "express":
+        build_stagiaire("3-express", "Dernier jour, version pratique", "Guide-stagiaire-Jour-3-express.pdf")
     if what in ("all", "sessions"):
         for p in sorted((DOCS / "formateur" / "sessions").glob("*.md")):
             build_session(p.stem)

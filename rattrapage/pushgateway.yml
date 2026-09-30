@@ -1,0 +1,5 @@
+# Jour 1 terminé : prometheus/targets/pushgateway.yml
+# Relu automatiquement par Prometheus (file_sd_configs), sans reload.
+- targets: ["pushgateway:9091"]
+  labels:
+    tier: outils
