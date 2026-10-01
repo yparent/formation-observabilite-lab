@@ -3,6 +3,9 @@ services:
   grafana:
     image: grafana/grafana:13.2.1
     container_name: grafana
+    # Codespaces : sans ce lanceur, les panels d'un dashboard au titre accentué restent vides
+    # (le proxy de GitHub refuse les en-têtes non-ASCII). Explication : grafana/codespaces/fix-headers.js
+    entrypoint: ["sh", "/etc/grafana/codespaces/entrypoint.sh"]
     restart: unless-stopped
     ports: ["3000:3000"]
     environment:
@@ -25,6 +28,7 @@ services:
       - ../grafana/provisioning:/etc/grafana/provisioning   # datasources, dashboards, alerting
       - ../grafana/dashboards:/var/lib/grafana/dashboards   # les JSON "as code"
       - grafana-data:/var/lib/grafana                       # grafana.db
+      - ../grafana/codespaces:/etc/grafana/codespaces:ro    # correctif Codespaces (voir plus haut)
     networks: [monitoring]
 
 volumes:
