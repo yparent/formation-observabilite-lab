@@ -16,3 +16,5 @@ install/bin/
 install/data/
 install/prometheus.yml
 rattrapage/sauvegarde-*/
+alertmanager/secrets/
+.mystere

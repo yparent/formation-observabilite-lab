@@ -3,7 +3,9 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/python:1": { "version": "3.13" }
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.13"
+    }
   },
   "hostRequirements": {
     "cpus": 2,
@@ -20,20 +22,61 @@
       }
     }
   },
-  "forwardPorts": [9090, 3000, 9093, 8080, 5001, 5002, 9100, 9115, 9091, 9121, 10902, 9092],
+  "forwardPorts": [
+    9090,
+    3000,
+    9093,
+    8080,
+    5001,
+    5002,
+    9100,
+    9115,
+    9091,
+    9121,
+    10902,
+    9092,
+    8025
+  ],
   "portsAttributes": {
-    "9090": { "label": "Prometheus" },
-    "3000": { "label": "Grafana" },
-    "9093": { "label": "Alertmanager" },
-    "8080": { "label": "Inbox notifications" },
-    "5001": { "label": "shop-api-1" },
-    "5002": { "label": "shop-api-2" },
-    "9100": { "label": "Node Exporter" },
-    "9115": { "label": "Blackbox Exporter" },
-    "9091": { "label": "Pushgateway" },
-    "9121": { "label": "Redis Exporter" },
-    "10902": { "label": "Thanos Query" },
-    "9092": { "label": "Prometheus B (Thanos)" }
+    "9090": {
+      "label": "Prometheus"
+    },
+    "3000": {
+      "label": "Grafana"
+    },
+    "9093": {
+      "label": "Alertmanager"
+    },
+    "8080": {
+      "label": "Inbox notifications"
+    },
+    "5001": {
+      "label": "shop-api-1"
+    },
+    "5002": {
+      "label": "shop-api-2"
+    },
+    "9100": {
+      "label": "Node Exporter"
+    },
+    "9115": {
+      "label": "Blackbox Exporter"
+    },
+    "9091": {
+      "label": "Pushgateway"
+    },
+    "9121": {
+      "label": "Redis Exporter"
+    },
+    "10902": {
+      "label": "Thanos Query"
+    },
+    "9092": {
+      "label": "Prometheus B (Thanos)"
+    },
+    "8025": {
+      "label": "Mailpit (e-mails)"
+    }
   },
   "postCreateCommand": "chmod +x lab.sh install/download.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask"
 }

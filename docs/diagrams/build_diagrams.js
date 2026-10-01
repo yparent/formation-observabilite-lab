@@ -329,6 +329,65 @@ const diagrams = [];
   diagrams.push(d);
 }
 
+// 14. Les quatre signaux dorés (service) au-dessus de USE (ressources)
+{
+  const d = new D("signaux-dores", 1800, 760);
+  d.group(40, 50, 1720, 300, { label: "Le service, vu par ses utilisateurs : les quatre signaux dorés (Google SRE)" });
+  const g = [
+    ["Latence", "le p95, pas la moyenne", "timer", P.blue, P.blueS],
+    ["Trafic", "requêtes par seconde", "activity", P.neutral, P.neutralS],
+    ["Erreurs", "part des 5xx", "triangle-alert", P.red, P.redS],
+    ["Saturation", "à quel point c'est plein", "gauge", P.orange, P.orangeS],
+  ];
+  g.forEach((x, i) => d.node(80 + i * 420, 120, 380, 190, { label: x[0], sub: x[1], fill: x[3], stroke: x[4], ico: x[2], topIcon: true, compact: true }));
+  d.arrow(900, 350, 900, 430, { label: "quand c'est rouge en haut, on descend", color: P.redS });
+  d.group(40, 430, 1720, 300, { label: "La machine, ressource par ressource : USE (Brendan Gregg)" });
+  const u = [
+    ["CPU", "utilisation · charge · pression", "cpu"],
+    ["Mémoire", "MemAvailable · défauts de page", "memory-stick"],
+    ["Disque", "espace · temps d'occupation", "hard-drive"],
+    ["Réseau", "débit · erreurs", "network"],
+  ];
+  u.forEach((x, i) => d.node(80 + i * 420, 500, 380, 190, { label: x[0], sub: x[1], fill: P.green, stroke: P.greenS, ico: x[2], topIcon: true, compact: true }));
+  diagrams.push(d);
+}
+
+// 15. Les chemins des notifications
+{
+  const d = new D("notifications", 1800, 760);
+  d.node(60, 90, 320, 150, { label: "Prometheus", sub: "règles dans alerts.yml", fill: P.orange, stroke: P.orangeS, ico: "flame" });
+  d.node(520, 90, 340, 150, { label: "Alertmanager", sub: "route · groupe · inhibe", fill: P.violet, stroke: P.violetS, ico: "bell-ring" });
+  d.arrow(380, 165, 520, 165, { label: "alertes", color: P.orangeS });
+  d.node(60, 480, 320, 150, { label: "Grafana", sub: "règles dans l'interface", fill: P.blue, stroke: P.blueS, ico: "layout-dashboard" });
+  d.node(520, 480, 340, 150, { label: "Contact points", sub: "notification policies", fill: P.blue, stroke: P.blueS, ico: "split" });
+  d.arrow(380, 555, 520, 555, { color: P.blueS });
+  const c = [
+    ["Microsoft Teams", "workflow « webhook »", "messages-square", 60, P.violet, P.violetS],
+    ["Slack", "incoming webhook", "hash", 290, P.yellow, P.yellowS],
+    ["E-mail", "relais SMTP (Mailpit au lab)", "mail", 520, P.green, P.greenS],
+  ];
+  c.forEach((x) => {
+    d.node(1180, x[3], 440, 150, { label: x[0], sub: x[1], fill: x[4], stroke: x[5], ico: x[2] });
+    d.arrow(860, 165, 1180, x[3] + 75, { color: P.violetS });
+    d.arrow(860, 555, 1180, x[3] + 75, { color: P.blueS, dashed: true });
+  });
+  d.text(900, 720, "Mêmes canaux, deux chemins. Jamais la même alerte des deux côtés.", { size: 30, color: P.grey });
+  diagrams.push(d);
+}
+
+// 16. PromQL avec l'IA : demander, comprendre, vérifier
+{
+  const d = new D("ia-promql", 1800, 720);
+  d.node(60, 80, 360, 420, { label: "1. Demander", fill: P.blue, stroke: P.blueS, ico: "message-square", big: true, subLines: ["le contexte", "les # HELP / # TYPE", "ce qu'on veut voir", "« explique-la »"], topIcon: true });
+  d.node(520, 80, 360, 420, { label: "2. Comprendre", fill: P.violet, stroke: P.violetS, ico: "bot", big: true, subLines: ["lire l'explication", "chaque fonction", "chaque label", "la reformuler"], topIcon: true });
+  d.node(980, 80, 360, 420, { label: "3. Vérifier", fill: P.green, stroke: P.greenS, ico: "check-check", big: true, subLines: ["ça s'exécute", "ordre de grandeur", "rate sur un compteur", "je casse, ça bouge"], topIcon: true });
+  d.node(1440, 200, 300, 180, { label: "Le panel", sub: "unité · seuils · légende", fill: P.orange, stroke: P.orangeS, ico: "layout-dashboard" });
+  d.arrow(420, 290, 520, 290, { color: P.blueS }); d.arrow(880, 290, 980, 290, { color: P.violetS }); d.arrow(1340, 290, 1440, 290, { color: P.greenS });
+  d.arrow(1160, 500, 1160, 580, { color: P.redS, dashed: true }); d.line(1160, 580, 240, 580, { color: P.redS, dashed: true }); d.arrow(240, 580, 240, 500, { color: P.redS, dashed: true }); d.text(700, 615, "faux ? on redonne l'erreur à l'IA, et on recommence", { size: 28, color: P.redS });
+  d.text(900, 680, "Jamais de données de production sensibles dans une IA publique.", { size: 30, color: P.redS });
+  diagrams.push(d);
+}
+
 // ---------------------------------------------------------------------------
 // Rendu HTML → PNG
 function html(d) {

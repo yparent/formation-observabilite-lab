@@ -1,0 +1,16 @@
+# Jour 3 : grafana/provisioning/datasources/thanos.yml (déposé par ./jour3.sh thanos on)
+# (ou la même chose en cliquant : Connections → Data sources → Add new data source → Prometheus)
+apiVersion: 1
+
+datasources:
+  - name: Thanos
+    uid: thanos
+    type: prometheus
+    access: proxy
+    url: http://thanos-query:10902
+    isDefault: false
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      prometheusType: Thanos

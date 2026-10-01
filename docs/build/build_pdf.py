@@ -193,6 +193,12 @@ def make_toc(items, pages=None) -> str:
 
 def postprocess(html: str) -> str:
     html = html.replace("\\|", "|")  # pipe échappé dans un tableau Markdown (GFM / Notion)
+    # liens cliquables pour les adresses écrites en clair (hors code)
+    parts = re.split(r"(<pre.*?</pre>|<code>.*?</code>|<a .*?</a>)", html, flags=re.S)
+    for k in range(0, len(parts), 2):
+        parts[k] = re.sub(r'(?<![="/])(https?://[^\s<>"]+[^\s<>".,;:)])', r'<a href="\1">\1</a>', parts[k])
+    html = "".join(parts)
+    html = html.replace("<li>[ ] ", "<li>☐ ").replace("<li>[x] ", "<li>☑ ")  # cases à cocher
     html = re.sub(r'<h3([^>]*)>Pas à pas', r'<h3\1 class="pap">Pas à pas', html)
     html = re.sub(r'(<h[1-6]) id="([^"]+)"', r'\1 id="h-\2"', html)
     # marqueur invisible (mais extractible) pour retrouver la page de chaque titre h1/h2
@@ -335,6 +341,23 @@ def build_stagiaire(day, label=None, pdf_name=None):
           "Formation Prometheus & Grafana", f"Guide stagiaire · {label}")
 
 
+def build_formateur_jour3():
+    """Guide formateur autonome du jour 3 pratique : docs/formateur/jour3/guide-formateur-jour3.md."""
+    src = DOCS / "formateur" / "jour3" / "guide-formateur-jour3.md"
+    text = src.read_text()
+    m = re.match(r"# (.*?)\n\n(.*)", text, flags=re.S)
+    title, rest = m.groups()
+    body = postprocess(md_to_html("# " + title + "\n\n" + rest))
+    body = body.replace('src="../../diagrams/', f'src="file://{DOCS / "diagrams"}/')
+    body = body.replace('src="../../stagiaire/img/', f'src="file://{DOCS / "stagiaire" / "img"}/')
+    build("guide-formateur-jour3", DOCS / "formateur" / "jour3" / "Guide-formateur-Jour-3-pratique.pdf",
+          "Formation Prometheus &amp; Grafana",
+          "Guide du formateur — Jour 3, version pratique : le déroulé pas à pas, le texte à dire, les manipulations, les corrections",
+          "Support formateur · édition octobre 2026", body,
+          "<strong>Yohan Parent</strong> · Architecte cloud, formateur", "<strong>1 jour</strong> · 4 TP · escape game · synthèse",
+          "Formation Prometheus & Grafana", "Guide formateur · Jour 3 pratique")
+
+
 def build_session(name: str):
     """Déroulé d'une session client : docs/formateur/sessions/<name>.md → PDF à côté."""
     src = DOCS / "formateur" / "sessions" / f"{name}.md"
@@ -357,9 +380,11 @@ if __name__ == "__main__":
     if what in ("all", "stagiaire"):
         for d in (1, 2, 3):
             build_stagiaire(d)
-        build_stagiaire("3-express", "Dernier jour, version pratique", "Guide-stagiaire-Jour-3-express.pdf")
-    if what == "express":
-        build_stagiaire("3-express", "Dernier jour, version pratique", "Guide-stagiaire-Jour-3-express.pdf")
+        build_stagiaire("3-pratique", "Jour 3, version pratique", "Guide-stagiaire-Jour-3-pratique.pdf")
+    if what in ("all", "jour3"):
+        build_formateur_jour3()
+    if what in ("express", "jour3"):
+        build_stagiaire("3-pratique", "Jour 3, version pratique", "Guide-stagiaire-Jour-3-pratique.pdf")
     if what in ("all", "sessions"):
         for p in sorted((DOCS / "formateur" / "sessions").glob("*.md")):
             build_session(p.stem)

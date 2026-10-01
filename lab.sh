@@ -37,6 +37,7 @@ urls() {
   Grafana        $(url 3000)   (admin / formation)
   Alertmanager   $(url 9093)
   Inbox notifs   $(url 8080)
+  Mailpit        $(url 8025)   (e-mails, jour 3)
   shop-api-1     $(url 5001)   /metrics
   shop-api-2     $(url 5002)   /metrics
   Node Exporter  $(url 9100)   /metrics

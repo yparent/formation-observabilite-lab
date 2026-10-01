@@ -19,6 +19,11 @@ commentés, un fichier par brique dans `compose/`, et chaque exercice vous dit l
 | Alertmanager + Inbox | `compose/06-alerting.yml` | Jour 3, exercice 3.0 |
 | Thanos (Prometheus B, 2 sidecars, store, query, compact) | `compose/07-thanos.yml` | Jour 3, TP 10 |
 | cAdvisor (optionnel) | `compose/08-cadvisor.yml` | si vous voulez |
+| Mailpit (faux serveur d'e-mails) | `compose/09-mail.yml` | Jour 3, notifications par e-mail |
+
+**Jour 3 en version pratique** : la branche `jour3` contient le lab déjà monté (application
+instrumentée, briques 01 à 06 et 09 actives). Un Codespace sur cette branche, puis
+`./jour3.sh start` : https://codespaces.new/yparent/formation-observabilite-lab/tree/jour3
 
 Trois façons d'obtenir l'environnement, au choix.
 
@@ -71,6 +76,7 @@ Depuis Git Bash, `./lab.sh` fonctionne aussi.
 | Prometheus | http://localhost:9090 | Collecte, stockage, PromQL, règles |
 | Alertmanager | http://localhost:9093 | Routage des alertes |
 | Inbox | http://localhost:8080 | Reçoit les notifications (remplace Teams/Slack pendant le lab) |
+| Mailpit | http://localhost:8025 | Reçoit les e-mails de Grafana et de l'Alertmanager (jour 3) |
 | shop-api-1 / -2 | http://localhost:5001 · :5002 | La boutique (2 instances), `/metrics` |
 | Node Exporter | http://localhost:9100/metrics | Métriques machine |
 | Blackbox Exporter | http://localhost:9115 | Sondes HTTP / TCP / ICMP |

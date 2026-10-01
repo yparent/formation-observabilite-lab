@@ -36,6 +36,7 @@ function Show-Urls {
   Write-Host "  Grafana        http://localhost:3000   (admin / formation)"
   Write-Host "  Alertmanager   http://localhost:9093"
   Write-Host "  Inbox notifs   http://localhost:8080"
+  Write-Host "  Mailpit        http://localhost:8025   (e-mails, jour 3)"
   Write-Host "  shop-api-1     http://localhost:5001   /metrics"
   Write-Host "  shop-api-2     http://localhost:5002   /metrics"
   Write-Host "  Node Exporter  http://localhost:9100   /metrics"

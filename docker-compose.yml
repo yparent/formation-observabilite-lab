@@ -25,6 +25,9 @@ include:
   # Jour 3 — TP 10
   # - compose/07-thanos.yml
 
+  # Jour 3 — notifications par e-mail (Mailpit)
+  # - compose/09-mail.yml
+
   # Optionnel
   # - compose/08-cadvisor.yml
 
