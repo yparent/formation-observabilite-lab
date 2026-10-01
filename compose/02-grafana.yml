@@ -8,6 +8,9 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: formation
+      # Codespaces : Grafana est ouvert via https://<codespace>-3000.app.github.dev. Sans cette ligne,
+      # sa protection CSRF refuse les requêtes des panels (403 « origin not allowed ») : « No data » partout.
+      GF_SECURITY_CSRF_TRUSTED_ORIGINS: "${CODESPACE_NAME:-localhost}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:-app.github.dev}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
