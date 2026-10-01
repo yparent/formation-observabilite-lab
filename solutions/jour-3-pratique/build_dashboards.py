@@ -97,7 +97,7 @@ d.panel("stat", "Trafic", [(f'sum(rate(http_requests_total{{{B}}}[$__rate_interv
         field={"unit": "reqps", "decimals": 1, "color": {"mode": "fixed", "fixedColor": "blue"}},
         options=dict(STAT, colorMode="background"),
         desc="Signal doré n°2 : combien de demandes. Jamais rouge : ni bon ni mauvais.")
-d.panel("stat", "Erreurs", [(f'sum(rate(http_requests_total{{{B}, status=~"5.."}}[$__rate_interval])) / sum(rate(http_requests_total{{{B}}}[$__rate_interval]))', "erreurs")], 6, 6, 5,
+d.panel("stat", "Erreurs", [(f'(sum(rate(http_requests_total{{{B}, status=~"5.."}}[$__rate_interval])) or vector(0)) / sum(rate(http_requests_total{{{B}}}[$__rate_interval]))', "erreurs")], 6, 6, 5,
         field={"unit": "percentunit", "decimals": 1, "min": 0, "color": {"mode": "thresholds"},
                "thresholds": thresholds(("green", None), ("orange", 0.01), ("red", 0.05))},
         options=STAT, desc="Signal doré n°3 : la part des réponses 5xx.")
@@ -114,7 +114,7 @@ d.row("Les signaux dans le temps")
 d.panel("timeseries", "Trafic par route", [(f'sum by (route) (rate(http_requests_total{{{B}}}[$__rate_interval]))', "{{route}}")], 0, 12, 8,
         field={"unit": "reqps", "custom": {"stacking": {"mode": "normal"}, "fillOpacity": 30, "lineWidth": 1}},
         options=LEGEND_TABLE)
-d.panel("timeseries", "Taux d'erreur (5xx)", [(f'sum(rate(http_requests_total{{{B}, status=~"5.."}}[$__rate_interval])) / sum(rate(http_requests_total{{{B}}}[$__rate_interval]))', "erreurs")], 12, 12, 8,
+d.panel("timeseries", "Taux d'erreur (5xx)", [(f'(sum(rate(http_requests_total{{{B}, status=~"5.."}}[$__rate_interval])) or vector(0)) / sum(rate(http_requests_total{{{B}}}[$__rate_interval]))', "erreurs")], 12, 12, 8,
         field={"unit": "percentunit", "min": 0, "color": {"mode": "fixed", "fixedColor": "red"},
                "custom": {"fillOpacity": 20, "thresholdsStyle": {"mode": "line+area"}},
                "thresholds": thresholds(("transparent", None), ("red", 0.05))},

@@ -201,7 +201,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\", status=~\"5..\"}[$__rate_interval])) / sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "(sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\", status=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\"}[$__rate_interval]))",
           "editorMode": "code",
           "range": true,
           "instant": null,
@@ -477,7 +477,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\", status=~\"5..\"}[$__rate_interval])) / sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "(sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\", status=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_requests_total{job=\"shop-api\", instance=~\"$instance\"}[$__rate_interval]))",
           "editorMode": "code",
           "range": true,
           "instant": null,
