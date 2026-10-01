@@ -1,0 +1,86 @@
+# CORRIGÉ TP D (jour 3) — l'alerting de Grafana « as code »
+# Chargé au démarrage de Grafana. Dans l'interface, ces objets portent la mention « Provisioned ».
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: equipe-commerce
+    receivers:
+      - uid: equipe-commerce
+        type: email
+        settings:
+          addresses: commerce@boutique.local
+          singleEmail: true
+        disableResolveMessage: false
+
+  # En salle : l'adresse du workflow Teams se colle dans un contact point créé à la main
+  # (les objets provisionnés ne se modifient pas dans l'interface). Ici : l'Inbox du lab.
+  - orgId: 1
+    name: teams-salle
+    receivers:
+      - uid: teams-salle
+        type: teams
+        settings:
+          url: http://inbox:8080/teams/grafana
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: teams-salle
+    group_by: [grafana_folder, alertname]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: equipe-commerce
+        object_matchers:
+          - [team, =, commerce]
+        group_wait: 10s
+        group_interval: 1m
+        mute_time_intervals: [week-end]
+
+muteTimes:
+  - orgId: 1
+    name: week-end
+    time_intervals:
+      - weekdays: [saturday, sunday]
+        location: Europe/Paris
+
+groups:
+  - orgId: 1
+    name: commerce
+    folder: Formation
+    interval: 1m
+    rules:
+      - uid: j3-ca-en-chute
+        title: "Chiffre d'affaires en chute"
+        condition: B
+        for: 1m
+        labels:
+          severity: warning
+          team: commerce
+        annotations:
+          summary: "Le chiffre d'affaires est tombé à {{ humanize (index $values \"A\").Value }} €/h"
+          description: "Moins de la moitié du chiffre d'affaires habituel (environ 180 000 €/h au lab)."
+          __dashboardUid__: j3-boutique-signaux-dores
+          __panelId__: "14"
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              range: false
+              editorMode: code
+              expr: 'sum(rate(shop_revenue_euros_total{job="shop-api"}[2m])) * 3600'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [90000] }

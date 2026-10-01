@@ -1,4 +1,28 @@
-# Formation Prometheus & Grafana — Jour 3, version pratique
+# Formation Prometheus & Grafana — Jour 3, branche CORRIGÉE (démonstrations formateur)
+
+[![Ouvrir dans GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yparent/formation-observabilite-lab/tree/jour3-corrige)
+
+Cette branche, `jour3-corrige`, contient **tous les TP du jour 3 déjà faits**, pour les
+explications et les démonstrations. Un Codespace sur cette branche, puis `./jour3.sh start` :
+
+| TP | Ce qui est en place | Où le voir |
+|---|---|---|
+| A | Dashboard « Boutique - Signaux dorés » (16 panels, variable, annotations Chaos, liens) | Grafana → Dashboards → Formation |
+| B | Dashboard « Serveur - USE » (CPU, mémoire, disque, réseau, cibles) | Grafana → Dashboards → Formation |
+| C | `prometheus/rules/alerts.yml` et `alertmanager/alertmanager.yml` (Teams, Slack, e-mail, inhibition) | Prometheus → Alerts ; Alertmanager ; Inbox ; Mailpit |
+| D | Contact points `equipe-commerce` (e-mail) et `teams-salle`, politique, mute timing `week-end`, règle « Chiffre d'affaires en chute » | Grafana → Alerting |
+
+Les sources des corrigés : `solutions/jour-3-pratique/` (les dashboards se régénèrent avec
+`python3 solutions/jour-3-pratique/build_dashboards.py`) et `grafana/provisioning/alerting/jour3-corrige.yml`.
+
+**Démonstrations utiles** : `./lab.sh chaos errors on` (cases Erreurs, alertes Teams + Slack +
+e-mail), `./lab.sh chaos latency on` (heatmap, inhibition de `ShopCheckoutSlow`), `./lab.sh
+traffic 1` (règle Grafana « Chiffre d'affaires en chute », e-mail dans Mailpit), `./lab.sh chaos
+cpu 120` (dashboard USE), `./jour3.sh teams 'URL'` (vrai Teams), `./jour3.sh repare`.
+
+---
+
+## La branche des stagiaires : `jour3`
 
 [![Ouvrir dans GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yparent/formation-observabilite-lab/tree/jour3)
 
