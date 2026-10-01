@@ -17,6 +17,7 @@ groups:
           severity: critical
         annotations:
           summary: "La cible {{ $labels.instance }} (job {{ $labels.job }}) ne répond plus"
+          description: "Prometheus n'arrive plus à collecter {{ $labels.instance }} depuis plus d'une minute."
 
       - alert: BlackboxProbeFailed
         expr: probe_success == 0
