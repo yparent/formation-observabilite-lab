@@ -22,10 +22,10 @@ table("Le programme du jour", ["Heure", "Séquence", "Ce que vous aurez fait"], 
   ["9h15", "Les bonnes métriques, PromQL avec l'IA", "Quatre requêtes comprises et vérifiées"],
   ["9h40", "TP A — La boutique en signaux dorés", "Un dashboard de service professionnel"],
   ["11h40", "TP B — Le serveur en méthode USE", "Un dashboard machine, relié au premier"],
-  ["12h10", "Auto-audit, bonnes pratiques", "Une note sur 10, et ce qu'il faut corriger"],
-  ["13h30", "TP C — Alertmanager, Teams, Slack, e-mail", "Des alertes routées, groupées, inhibées"],
+  ["12h10", "Auto-audit des tableaux de bord", "Une note sur 10, et ce qu'il faut corriger"],
+  ["13h40", "TP C — Alertmanager, Teams, Slack, e-mail", "Des alertes routées, groupées, inhibées"],
   ["15h00", "TP D — Alerting Grafana, Teams en vrai", "Une alerte métier, un message dans Teams"],
-  ["15h30", "Escape game : la boutique sabotée", "Deux pannes trouvées sans le terminal"],
+  ["15h30", "Bonnes pratiques, escape game", "Deux pannes trouvées sans le terminal"],
 ], { colW: [0.9, 4.1, 4.0], size: 12, rowH: 0.42, note: "Pauses 10h30 et 14h30, déjeuner 12h30. Fin 16h00, ferme." });
 code("Démarrer en trois minutes", `1. Ouvrir (connecté à GitHub) :
 
@@ -78,7 +78,7 @@ ligne, en français simple : ce que fait chaque fonction,
 chaque opérateur et chaque label, et quelle unité on obtient.`, ["Le contexte et les vraies métriques : sinon l'IA invente des noms", "« Explique-la » : on doit pouvoir la redire en une phrase", "Faux ? On redonne l'erreur à l'IA", "Jamais de données de production sensibles dans une IA publique"], { size: 10.5 });
 twoCol("Comprendre, puis vérifier", { h: "Comprendre", items: ["Lire l'explication, fonction par fonction", "La redire en une phrase à son voisin", "Sinon : « réexplique plus simplement »", "Une requête qu'on ne comprend pas, on ne saura pas la réparer"] },
   { h: "Vérifier, en quatre points", items: ["1. Elle s'exécute dans Explore", "2. L'ordre de grandeur est plausible (6 req/s, pas 60 000)", "3. Un compteur est dans rate() ou increase()", "4. Je casse : la courbe bouge dans le bon sens"] }, { rightColor: C.navy });
-tp("EXPLORE", "Échauffement : les quatre signaux", "Une requête par signal doré, pour toute la boutique, demandée à l'IA, expliquée, vérifiée. Dans Explore : $__rate_interval devient 5m, et pas de filtre instance.", [
+tp("EXPLORE", "Échauffement : les quatre signaux", "Une requête par signal doré, pour toute la boutique, demandée à l'IA, expliquée, vérifiée. Dans Explore : $__rate_interval devient 5m, et pas de filtre instance. 7 minutes.", [
   { h: "Trafic", p: "Environ 6 req/s. Piège : le compteur brut." },
   { h: "Erreurs", p: "0 sans chaos. Piège : status=\"500\" au lieu de =~\"5..\"." },
   { h: "Latence p95", p: "0,15 à 0,25 s. Piège : la moyenne, ou oublier le le." },
@@ -103,8 +103,8 @@ tp("TP A", "La boutique en quatre signaux dorés", "Le directeur veut un écran 
   { h: "« Ça va ? »", p: "Quatre Stat colorés : trafic, erreurs, latence p95, saturation." },
   { h: "Dans le temps", p: "Débit par route, erreurs, p50/p95/p99, heatmap, requêtes en cours." },
   { h: "Métier", p: "Chiffre d'affaires / h, moyens de paiement, stock." },
-  { h: "Finitions", p: "Panel Text, annotations Chaos, lien vers le TP B, crash test." },
-], "95 minutes en deux temps, autour de la pause. Les requêtes : l'IA, sinon l'annexe de secours.");
+  { h: "Finitions", p: "Panel Text, annotations Chaos, tag et liens, crash test." },
+], "90 minutes en deux temps, autour de la pause. Les requêtes : l'IA, sinon l'annexe de secours.");
 image("Un exemple de résultat", path.join(IMG, "..", "..", "stagiaire", "img", "tp5-boutique.png"), "Le vôtre sera organisé en signaux dorés : quatre cases en haut, le détail en dessous, le métier en bas");
 tp("TP B", "Le serveur en méthode USE", "Quand le haut du dashboard boutique est rouge, l'infra veut descendre d'un clic vers la machine et regarder chaque ressource : utilisation, saturation, erreurs.", [
   { h: "CPU", p: "Utilisation, charge par cœur, pression (PSI)." },

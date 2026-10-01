@@ -53,6 +53,8 @@ les deux souvenirs de la journée.
 **Les supports.**
 
 - Le deck **Jour3-Prometheus-Grafana.pptx**, 40 slides, avec le texte à dire dans les notes.
+- Le **corrigé stagiaire** (`Guide-stagiaire-Jour-3-corriges.pdf`) : toutes les réponses, à
+  donner à la fin de la journée.
 - Le **guide stagiaire jour 3** (PDF, et Markdown pour Notion), avec à la fin une synthèse de toute
   la formation, quatre checklists de mise en production, un déroulé type et les ressources.
 - La branche **`jour3`** du dépôt : tout est préconfiguré, et la télécommande `./jour3.sh` fait le
@@ -81,35 +83,71 @@ Vérification sur github.com : le sélecteur de branches affiche `jour3`, qui co
 ### Pas à pas — créer le workflow Teams de la salle (10 min)
 
 C'est ce qui permettra aux stagiaires d'envoyer de vrais messages dans Teams. Je le fais sur
-**mon** Teams (Sparks ou YSY Cloud), pas sur celui d'Apicil : je ne dépends pas de leur politique
-de sécurité, et je projette le canal.
+**mon** Teams professionnel (Sparks ou YSY Cloud), pas sur celui d'Apicil : je ne dépends pas de
+leur politique de sécurité, et je projette le canal.
 
-1. Dans Teams, je crée une équipe ou j'utilise une équipe existante, et j'y crée un canal
-   **standard** (pas privé) : `Formation Apicil - alertes`.
-2. Sur le canal : **⋯** (Plus d'options) → **Workflows**.
-3. Je cherche le modèle **« Send webhook alerts to a channel »** (le même modèle s'appelle
-   « Post to a channel when a webhook request is received » dans Power Automate). Selon la langue
-   de Teams, le libellé peut être traduit : je cherche « webhook ».
-4. Nom du workflow : `Alertes formation`. **Suivant**. Je vérifie l'équipe et le canal.
-   **Ajouter un workflow**.
-5. Teams affiche une **adresse** (elle commence par `https://` et contient `workflows` ou
-   `logic.azure.com`). Je la **copie** dans un fichier texte sur mon bureau : `url-teams.txt`.
-6. Je teste depuis mon Mac, dans Terminal (en remplaçant l'adresse) :
+**Prérequis.** Un compte Teams **professionnel** (Microsoft 365) : le Teams personnel gratuit n'a
+pas les workflows. L'application **Workflows** doit être autorisée dans le tenant (c'est le cas
+par défaut). Si elle n'apparaît pas : **Applications** (barre de gauche) → chercher
+« Workflows » → **Ajouter**.
+
+**1. Le canal (2 min).**
+
+1. Dans Teams, barre de gauche : **Teams** (ou **Équipes**). Je choisis une équipe dont je suis
+   propriétaire, ou **Rejoindre ou créer une équipe → Créer une équipe → À partir de zéro →
+   Privée**, nom `Formation Prometheus`.
+2. Sur l'équipe : **⋯** → **Ajouter un canal**. Nom `alertes-apicil`, type **Standard**
+   (surtout pas *Privé*). **Ajouter**.
+
+**2. Le workflow (3 min).**
+
+3. Je survole le canal `alertes-apicil` dans la liste : **⋯** (Plus d'options) → **Workflows**.
+   (Autre chemin : ouvrir le canal, **⋯** en haut à droite → **Workflows**.)
+4. Une fenêtre liste des modèles. Dans la recherche, je tape **webhook** et je choisis
+   **« Send webhook alerts to a channel »** (si Teams est en français, le libellé peut être
+   traduit : la recherche « webhook » le trouve ; Power Automate l'appelle « Post to a channel
+   when a webhook request is received »).
+5. Teams peut demander de **se connecter** pour autoriser la connexion à Teams : j'accepte avec
+   mon compte (il doit être membre de l'équipe). Puis **Suivant** si le bouton apparaît.
+6. Je vérifie **Équipe** = `Formation Prometheus` et **Canal** = `alertes-apicil`.
+   **Enregistrer** (ou **Ajouter un workflow**, selon la version).
+7. L'écran final affiche **« Copier le lien du webhook »** (*Copy webhook link*). Je clique : la
+   longue adresse (`https://…`, plusieurs centaines de caractères) est dans le presse-papiers. Je
+   la colle dans un fichier texte sur mon bureau, `url-teams.txt`.
+   Si j'ai fermé la fenêtre trop vite : Teams → **Applications** → **Workflows** → mon workflow
+   → la première étape (« Lorsqu'une requête webhook Teams est reçue ») affiche l'adresse.
+
+**3. Le test (2 min).** Dans Terminal sur mon Mac, en remplaçant `COLLER-ICI-L-ADRESSE` (en
+gardant les guillemets) :
 
 ```bash
 curl -H "Content-Type: application/json" -d '{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","content":{"type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"Test de la formation : ça marche !"}]}}]}' "COLLER-ICI-L-ADRESSE"
 ```
 
-   Le message « Test de la formation : ça marche ! » arrive dans le canal en quelques secondes.
+8. Le terminal ne répond rien (ou `202`) : c'est normal. Dans le canal, en 5 à 30 secondes, un
+   message « Test de la formation : ça marche ! » apparaît, envoyé par **Workflows** (ou à mon
+   nom, selon le réglage du modèle).
+9. Rien après une minute : Teams → **Applications** → **Workflows** → mon workflow →
+   **Historique des exécutions**. Une exécution en échec dit pourquoi (souvent : connexion non
+   autorisée ; je la réautorise).
 
-**Sécurité.** Cette adresse permet à n'importe qui d'écrire dans le canal. Je la donne aux
-stagiaires pendant le TP C, et **je supprime le workflow ce soir** (Teams → le canal → ⋯ →
-Workflows → le workflow → Supprimer). Je le dis aux stagiaires : c'est une bonne pratique en
-soi.
+**4. La partager pendant la formation.** Au TP C (démonstration) puis au TP D (tous), je colle
+l'adresse dans le **chat de la session** (pas sur une slide, pas en photo : elle est trop longue
+pour être recopiée). Les stagiaires la collent :
 
-**Plan B** si les workflows sont bloqués sur mon tenant : les stagiaires gardent l'adresse de
-l'Inbox (`http://inbox:8080/teams/grafana`), qui simule Teams. On perd l'effet « waouh », pas la
-compétence.
+- dans Grafana : contact point **Microsoft Teams** → champ **URL** ;
+- dans leur terminal, pour l'Alertmanager : `./jour3.sh teams 'ADRESSE'` (entre apostrophes : elle
+  contient des `&`).
+
+**5. Ce soir.** Je **supprime le workflow** : Teams → **Applications** → **Workflows** → mon
+workflow → **⋯** → **Supprimer**. Cette adresse permet à n'importe qui d'écrire dans le canal :
+je le dis aux stagiaires, c'est une bonne pratique en soi.
+
+**Plan B** si les workflows sont bloqués : les stagiaires gardent l'adresse de l'Inbox
+(`http://inbox:8080/teams/grafana`), qui simule Teams. On perd l'effet « waouh », pas la
+compétence. Autre plan B : l'adresse e-mail du canal (canal → ⋯ → **Obtenir l'adresse e-mail**),
+utilisée dans un contact point **Email** de Grafana… mais le lab n'a pas de vrai serveur SMTP :
+c'est pour la démonstration en production, pas pour aujourd'hui.
 
 ### Pas à pas — préparer mon Codespace de démonstration (10 min)
 
@@ -369,7 +407,7 @@ ligne » dans mon Grafana de démo.
 2. En haut à droite, visualisation **Stat**.
 3. Options, champ de recherche : `unit` → *requests/sec (rps)*.
 4. `color mode` → **Background** ; `graph mode` → **Area**.
-5. *Thresholds* → *Color scheme* : couleur unique bleue. « Le trafic n'est ni bon ni mauvais : il
+5. *Standard options* → *Color scheme* : **Single color**, bleu. « Le trafic n'est ni bon ni mauvais : il
    ne doit jamais être rouge. Le rouge, c'est "il faut agir". »
 6. Titre `Trafic`, **Back to dashboard**, je le réduis à un quart de largeur. **Ctrl+S**.
 
@@ -384,6 +422,12 @@ ligne » dans mon Grafana de démo.
 | Donut d'une seule part | pas de `by (payment_method)` | et la légende `{{payment_method}}` |
 | Stock : 12 barres | pas d'`avg by (product)` | les deux instances ont chacune leur stock |
 | Rien n'est sauvegardé | tout perdu au rechargement | « Ctrl+S toutes les dix minutes. » |
+
+**La question de l'étape 1 : le signal qui a réagi le plus lentement.** Les erreurs et la latence :
+elles sont calculées avec `rate()` sur une fenêtre (`$__rate_interval`, au moins une minute, plus
+les 15 secondes de scrape), qui lisse et retarde la montée. Le CPU réagit au scrape suivant. Une
+fenêtre courte réagit vite mais clignote ; une fenêtre longue est stable mais lente : c'est un
+compromis, le même qu'avec le `for` des alertes cet après-midi.
 
 **La question de l'étape 3 : pourquoi `rate` pour un montant ?** `shop_revenue_euros_total` est
 un compteur : tout ce qui a été vendu depuis le démarrage, remis à zéro à chaque redémarrage.
@@ -406,7 +450,9 @@ de vitesse.
 2. **L'annotation Chaos** : *Add → Annotation query*. Je lance `./lab.sh chaos errors on` : un
    trait rouge vertical sur toutes les courbes. « En post-mortem, la première question est
    toujours : qu'est-ce qui a changé à ce moment-là ? »
-3. **Le lien** vers le dashboard serveur, *Keep time range*. « Quand le haut est rouge, un clic
+3. **Le lien** : *Settings* → *Tags* `formation` sur chaque dashboard, puis *Settings* → *Links* →
+   *Add dashboard link*, type *Dashboards*, *With tags* `formation`, *As dropdown*, *Include
+   current time range*. « Quand le haut est rouge, un clic
    pour descendre d'un étage, sur la même période. »
 
 Le texte du panel Text :
@@ -431,7 +477,7 @@ aurait réveillé quelqu'un pour une bonne nouvelle. »
 formateur) :
 
 ```bash
-git fetch origin jour3-formateur
+git fetch origin
 git checkout origin/jour3-formateur -- solutions/jour-2/dashboards/
 cp solutions/jour-2/dashboards/*.json grafana/dashboards/
 ```
@@ -517,7 +563,7 @@ des données à 15h50.
 - **Slide 24 — Le cycle de vie.** Inactive, Pending, Firing. « Le `for`, c'est l'anti-faux
   positif : le détecteur de fumée qui sonnerait au premier grille-pain, tout le monde finirait par
   enlever la pile. »
-- **Slide 25 — Deux chemins.** « Même canaux, deux chemins. Jamais la même alerte des deux
+- **Slide 25 — Deux chemins.** « Mêmes canaux, deux chemins. Jamais la même alerte des deux
   côtés. »
 - **Slide 26 — Les concepts.** « Retenez ce tableau : vous allez le vivre dans les deux TP. »
 - **Slide 27 — L'arbre de routage.** « Un aiguillage de gare. Le `continue`, c'est la
@@ -548,7 +594,8 @@ Je projette `jour3/alerting/alerts.yml` et je lis `ShopHighErrorRate` à voix ha
 1. Symptômes : `ShopHighErrorRate`, `ShopCheckoutSlow`, `BlackboxProbeFailed`, et `TargetDown`
    (l'absence de mesure). Cause : `HostHighCpuLoad`, et c'est pour ça qu'elle est en `warning`.
 2. `for` : l'anti-faux positif, le passage *Pending → Firing*. `team` : sert au routage.
-3. Réveille : `ShopHighErrorRate` (critical). Ne doit jamais réveiller : `HostHighCpuLoad`.
+3. Réveillent (critical, donc l'astreinte Teams) : `ShopHighErrorRate`, `TargetDown`,
+   `BlackboxProbeFailed`. Ne doit jamais réveiller : `HostHighCpuLoad` (une cause, en warning).
 
 ### Partie 2 — L'arbre de routage (10 min)
 
@@ -596,9 +643,12 @@ après ; notifications 10 s plus tard (`group_wait`).
 > « Le site est en erreur, l'astreinte est réveillée. A-t-elle besoin, en plus, de "le paiement
 > est lent" ? Non : c'est du bruit. L'inhibition, c'est "si A sonne, fais taire B". »
 
-Ils ajoutent le bloc de six lignes, `check`, `reload`, chaos errors **et** latency. Au bout de
-deux minutes, `amtool alert query --inhibited` montre `ShopCheckoutSlow` (*suppressed*), et rien
-n'est arrivé pour elle dans l'Inbox ni dans Mailpit.
+Ils ajoutent le bloc de six lignes, `check`, `reload`, puis `chaos errors on` ; quand
+`ShopHighErrorRate` est *Firing* (environ 1 min 30), `chaos latency on`. Deux minutes plus tard,
+`amtool alert query --inhibited` montre `ShopCheckoutSlow` (*suppressed*), et rien n'est arrivé
+pour elle dans l'Inbox ni dans Mailpit. Si on lance les deux chaos en même temps, la lenteur
+peut notifier avant que l'erreur ne soit *Firing* : l'inhibition ne joue que si la source est
+déjà active.
 
 ### Partie 5 — Le silence (5 min)
 
@@ -664,13 +714,13 @@ Je projette Teams. Les messages de test arrivent les uns après les autres. Je l
 | Piège | Ce que je dis |
 |---|---|
 | Le test Teams échoue | l'adresse est incomplète (copier-coller tronqué) : la recopier depuis le chat |
-| La règle reste en *Normal* | le seuil : *IS BELOW* la moitié de la valeur actuelle (environ 170 000 €/h au lab), puis `./lab.sh traffic 1` |
+| La règle reste en *Normal* | le seuil : *IS BELOW* la moitié de la valeur actuelle (environ 180 000 €/h au lab), puis `./lab.sh traffic 1` |
 | *Preview* montre des courbes | requête en *Range* : passer en **Instant** |
 | L'e-mail ne part pas, l'alerte va dans Teams | le label `team=commerce` manque sur la règle, ou le matcher de la politique est mal saisi |
-| Rien après *Firing* | *Group wait* de 30 s par défaut, plus l'intervalle d'évaluation : 1 à 2 minutes |
+| Rien après *Firing* | évaluation toutes les minutes, *Pending period* 1 min, *Group wait* 10 s : 2 à 3 minutes en tout |
 
-Le déclenchement : `./lab.sh traffic 1`. Le chiffre d'affaires tombe d'environ 170 000 à
-20 000 €/h en deux minutes, la règle passe *Pending* puis *Firing*, l'e-mail arrive dans Mailpit.
+Le déclenchement : `./lab.sh traffic 1`. Le chiffre d'affaires tombe d'environ 180 000 €/h à
+moins de 40 000 en deux à trois minutes, la règle passe *Pending* puis *Firing*, l'e-mail arrive dans Mailpit.
 `./lab.sh traffic 6`.
 
 ### Le tableau comparatif, tous ensemble (7 min)
@@ -686,6 +736,7 @@ Je remplis au tableau, **avec leurs réponses** :
 | Plusieurs sources (SQL, logs) | non, métriques Prometheus seulement | oui |
 | Si Grafana tombe | les alertes continuent | plus d'alertes |
 | Inhibition | oui | pas d'équivalent direct |
+| Pour quoi chez moi ? | les alertes techniques, critiques, sur les métriques | les alertes métier, sur SQL ou logs, réglables par les équipes |
 
 Slide 32, la conclusion : « Les alertes techniques, critiques, qui doivent survivre à tout :
 Prometheus et Alertmanager, dans Git, testées. Les alertes métier, multi-sources : Grafana. »
@@ -726,8 +777,14 @@ solution, la boutique est réparée, ils comptent leurs points.
 | 3 | Redis arrêté | Explore : `redis_up` = 0 | **aucune** | `up{job="redis"}` reste à 1 : c'est l'exporter qui répond. L'alerte qui manque : `redis_up == 0` |
 | 4 | Trafic ×5 | cases Trafic et Saturation, chiffre d'affaires en hausse | éventuellement `HostHighCpuLoad` → infra | ce n'est **pas** une panne : la bonne réponse est « beaucoup de clients » |
 | 5 | CPU saturé pendant 15 min | case Saturation rouge, dashboard USE (CPU, charge, pression) | `HostHighCpuLoad` (warning) → infra-inbox | la boutique reste rapide : une saturation n'est pas encore une panne |
-| 6 | `shop-api-1` arrêtée | State timeline, `up` = 0 ; `probe_success` = 0 | `TargetDown` et `BlackboxProbeFailed` → Teams | le trafic total baisse peu : l'autre instance absorbe |
+| 6 | `shop-api-1` arrêtée | State timeline, `up` = 0 ; `probe_success` = 0 ; le trafic mesuré et le chiffre d'affaires **divisés par deux** | `TargetDown` (label `team=boutique` hérité de la cible) → Teams + Slack + e-mail ; `BlackboxProbeFailed` → Teams | il n'y a pas de répartiteur : le générateur de trafic tire une instance au hasard, la moitié des requêtes échoue sans être comptée |
 | 7 | Fuite mémoire | Explore : `process_resident_memory_bytes{job="shop-api"}` qui grimpe | **aucune** | aucun dashboard ne le montre. L'alerte qui manque : une `predict_linear` sur la mémoire du processus |
+
+**Attention à l'inhibition du TP C.** Elle reste active pendant le jeu. Si le tirage donne 1 et 2
+ensemble, `ShopHighErrorRate` (critical) fait taire `ShopCheckoutSlow` (warning) : rien
+n'arrive pour la lenteur dans l'Inbox ni dans Mailpit, mais l'alerte est visible dans
+l'Alertmanager, filtre *Inhibited*. C'est une bonne réponse : « elle a sonné, mais elle était
+inhibée ».
 
 **Le bonus de 2 points** va à ceux qui trouvent le 3 ou le 7 et disent quelle alerte aurait dû
 exister. « C'est exactement le travail d'une revue post-incident : qu'est-ce qui nous a manqué ? »
@@ -800,6 +857,9 @@ Tour de table éclair : un service chacun, à voix haute.
 > construit deux tableaux de bord selon les méthodes de Google, envoyé des alertes dans Teams et
 > par e-mail, et retrouvé deux pannes sans toucher au terminal. Merci à tous. »
 
+Juste avant de conclure, je montre où sont les corrigés : `docs/stagiaire/Guide-stagiaire-Jour-3-corriges.pdf`
+dans leur Codespace (ou sur GitHub, branche `jour3`), et je le dépose dans le chat de la session.
+
 16h00 : fin. **Ce soir** : je supprime le workflow Teams.
 
 ---
@@ -841,5 +901,5 @@ La branche `jour3-formateur` contient en plus les corrigés (`solutions/`), le d
 | Aucune notification dans l'Inbox | `./lab.sh check` (erreur de YAML ?), puis `./lab.sh reload` ; Prometheus → Status → Alertmanager discovery |
 | L'e-mail n'arrive pas dans Mailpit | `docker compose ps mailpit` ; dans Grafana, *Test* sur le contact point |
 | Le message n'arrive pas dans Teams | l'adresse est tronquée ; tester avec le `curl` de la veille ; plan B : l'Inbox |
-| `./jour3.sh solution` dit « aucun sabotage » | le stagiaire a relancé `mystere` puis `solution` deux fois : `./jour3.sh repare` |
+| `./jour3.sh solution` dit « aucun sabotage » | `solution` a déjà été lancé (il efface la solution après l'avoir affichée) : rien à faire, ou `./jour3.sh repare` |
 | Le Codespace est très lent | 2 cœurs, c'est juste avec Thanos : `./jour3.sh thanos off` |

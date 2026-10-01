@@ -18,18 +18,20 @@ tableaux de bord, alerter dans Teams, Slack et par e-mail, et enquêter sur une 
 | 10h30 | *Pause* |
 | 11h00 | TP A, suite et finitions |
 | 11h40 | TP B — Le serveur en méthode USE |
-| 12h10 | Auto-audit des tableaux de bord, bonnes pratiques |
+| 12h10 | Auto-audit des tableaux de bord (bonnes pratiques Grafana) |
 | 12h30 | *Déjeuner* |
 | 13h30 | Alerter sans épuiser les équipes |
 | 13h40 | TP C — Prometheus, Alertmanager, Teams, Slack et e-mail |
 | 14h30 | *Pause* |
 | 15h00 | TP D — L'alerting de Grafana, Teams en vrai, et la comparaison |
-| 15h30 | Escape game : la boutique sabotée |
+| 15h30 | Bonnes pratiques Prometheus et sécurité, puis escape game : la boutique sabotée |
 | 15h50 | Thanos en cinq minutes, lundi matin |
 | 16h00 | Fin |
 
 À la fin du guide : **une synthèse de toute la formation**, des **checklists de mise en
-production** et des **ressources** à garder.
+production**, des **ressources** à garder, et les **requêtes de secours**. Les réponses à toutes
+les questions du jour sont dans un document à part, `Guide-stagiaire-Jour-3-corriges.pdf` (même
+dossier) : à lire **après** avoir cherché.
 
 ---
 
@@ -59,7 +61,8 @@ serveur de messagerie (Mailpit).
 | 9093 | Alertmanager | |
 | 8080 | Inbox : les messages « Teams » et « Slack » du lab | |
 | 8025 | Mailpit : les e-mails | |
-| 5001 | shop-api-1, page `/metrics` | |
+| 5001 | shop-api-1, page `/metrics` (les métriques de la boutique) | |
+| 9100 | Node Exporter, page `/metrics` (les métriques de la machine) | |
 
 **Les commandes pour casser la boutique**, qui serviront toute la journée :
 
@@ -117,12 +120,17 @@ Utilisez l'IA de votre choix. Copiez ce modèle et complétez les deux lignes en
 Je travaille avec Prometheus 3 et Grafana 13.
 Voici les métriques disponibles (extrait de la page /metrics) :
 <collez les lignes # HELP et # TYPE de la métrique, et deux ou trois lignes de valeurs>
-Les séries ont les labels job="shop-api" et instance.
+Les séries ont les labels job="shop-api" et instance.   (pour la machine : job="node", page 9100)
 Écris la requête PromQL pour un panel Grafana qui affiche : <ce que vous voulez, avec l'unité>.
 Utilise $__rate_interval et le filtre instance=~"$instance".
 Donne d'abord la requête seule, puis explique-la ligne par ligne, en français simple :
 ce que fait chaque fonction, chaque opérateur et chaque label, et quelle unité on obtient.
 ```
+
+**Adaptez la ligne des labels** : pour les métriques de la machine (`node_…`, TP B et panel
+Saturation du TP A), copiez les lignes depuis la page du port **9100** et écrivez `job="node"`.
+Dans le dashboard Boutique, le panel Saturation ne prend **pas** le filtre `instance` (la
+variable liste les instances de la boutique, pas la machine).
 
 **Comprendre.** Lisez l'explication. Si vous ne pouvez pas redire la requête en une phrase à
 votre voisin, demandez à l'IA de réexpliquer plus simplement. Une requête qu'on ne comprend pas,
@@ -139,7 +147,7 @@ on ne saura pas la réparer le jour où elle sera fausse.
 **Sécurité** : jamais de données de production sensibles (noms de clients, adresses internes,
 mots de passe) dans une IA publique. Demandez à votre RSSI quel outil est autorisé.
 
-### Échauffement — les quatre signaux dans Explore (10 min)
+### Échauffement — les quatre signaux dans Explore (7 min)
 
 Grafana → **Explore** → source **Prometheus** → mode **Code**. Une requête par signal doré,
 **pour toute la boutique** (dans Explore, remplacez `$__rate_interval` par `5m` et retirez le
@@ -171,7 +179,7 @@ valeurs. `$__rate_interval` à la place de `[5m]` : Grafana choisit la fenêtre 
 
 ---
 
-## TP A — La boutique en quatre signaux dorés (95 min)
+## TP A — La boutique en quatre signaux dorés (90 min)
 
 **Situation.** Le directeur de la boutique en ligne veut un écran unique. En haut, en cinq
 secondes : « est-ce que ça va ? ». En dessous, pour l'équipe technique : quand, où, combien.
@@ -189,7 +197,8 @@ minutes sur une requête ? L'annexe « Requêtes de secours », à la fin du gui
 2. **Add → Variable** (ou **Settings → Variables → New variable**) : type *Query*, nom
    `instance`, label `Instance`, requête `label_values(http_requests_total{job="shop-api"}, instance)`.
    Cochez *Multi-value* et *Include All option* (*Custom all value* : `.*`).
-3. Sauvegardez : `Boutique - Signaux dorés`, dossier *Formation*. Ensuite, **Ctrl+S** (ou
+3. **Settings** (roue dentée) → *Tags* : ajoutez le tag `formation` (il servira aux liens).
+   Sauvegardez : `Boutique - Signaux dorés`, dossier *Formation*. Ensuite, **Ctrl+S** (ou
    **Cmd+S**) toutes les dix minutes.
 
 ### Étape 1 — Row « Est-ce que ça va ? » (25 min)
@@ -227,8 +236,8 @@ Latence.
 | # | Panel | Demandez à l'IA | Réglages |
 |---|---|---|---|
 | 10 | Chiffre d'affaires / heure | le chiffre d'affaires par heure, depuis le compteur `shop_revenue_euros_total` | Stat ; Unit *Euro (€)* ; 0 décimale ; couleur verte |
-| 11 | Moyens de paiement | le nombre de commandes par `payment_method` sur la période affichée (`$__range`) | Pie chart *Donut* ; Instant ; légende à droite avec *Percent* |
-| 12 | Stock par produit | le stock moyen par `product` (deux instances) | Bar gauge *LCD* ; Instant ; Max 120 ; seuils rouge, orange à 20, vert à 40 |
+| 11 | Moyens de paiement | le nombre de commandes par `payment_method` sur la période affichée (`$__range`) | Pie chart *Donut* ; Instant ; légende `{{payment_method}}` à droite avec *Percent* |
+| 12 | Stock par produit | le stock moyen par `product` (deux instances) | Bar gauge *LCD* ; Instant ; légende `{{product}}` ; Max 120 ; seuils rouge, orange à 20, vert à 40 |
 
 *Question : pourquoi le chiffre d'affaires se calcule-t-il avec `rate` alors que c'est « un
 montant » ?*
@@ -242,9 +251,11 @@ montant » ?*
    lit quelqu'un qui arrive ici à 3 h du matin.
 2. **Les incidents sur les courbes** : *Add → Annotation query*, nom `Chaos`, source Prometheus,
    requête `changes(shop_chaos_mode{instance=~"$instance"}[1m]) > 0`, titre `Chaos {{mode}}`,
-   couleur rouge. Lancez un chaos : un trait rouge vertical apparaît sur **toutes** les courbes.
-3. **Les liens** : *Add → Link*, type *Dashboard*, vers le dashboard du TP B (vous le créerez
-   ensuite), *Keep time range* coché.
+   couleur rouge. Lancez `./lab.sh chaos errors on` (ou `latency`) : un trait rouge vertical
+   apparaît sur **toutes** les courbes. (`chaos cpu` ne laisse pas de trait.)
+3. **Les liens** : **Settings → Links → Add dashboard link**, type *Dashboards*, *With tags* :
+   `formation`, cochez *As dropdown* et *Include current time range*. Tous les dashboards qui
+   portent le tag `formation` (dont celui du TP B) apparaissent dans un menu en haut.
 4. **La cohérence** : le même rouge veut dire la même chose partout ; aucune unité manquante.
 
 ### Étape 5 — Le crash test (5 min)
@@ -260,14 +271,15 @@ la liste des dashboards. Le même dashboard existe maintenant en code, versionna
 
 ---
 
-## TP B — Le serveur en méthode USE (30 min)
+## TP B — Le serveur en méthode USE (30 min, import compris)
 
 **Situation.** Quand le haut du dashboard boutique est rouge, l'équipe infra veut descendre d'un
 clic vers la machine, et regarder chaque ressource sous trois angles : **U**tilisation (occupée
 combien de temps ?), **S**aturation (combien de travail attend ?), **E**rreurs.
 
-Nouveau dashboard `Serveur - USE`, dossier *Formation*, variable `instance` avec la requête
-`label_values(node_uname_info, instance)`.
+Nouveau dashboard `Serveur - USE`, dossier *Formation*, tag `formation`, variable `instance`
+avec la requête `label_values(node_uname_info, instance)`. Ici, toutes les requêtes portent sur
+`job="node"` (page 9100 pour copier les `# HELP`).
 
 | # | Ressource | Panel | Demandez à l'IA | Réglages |
 |---|---|---|---|---|
@@ -276,9 +288,9 @@ Nouveau dashboard `Serveur - USE`, dossier *Formation*, variable `instance` avec
 | 3 | CPU | Saturation (pression) | le temps d'attente CPU de `node_pressure_cpu_waiting_seconds_total`, en % | Time series ; Percent (0.0-1.0) |
 | 4 | Mémoire | Utilisation | le % de mémoire utilisée avec `MemAvailable` (et pas `MemFree`) | Gauge ; Percent (0-100) ; seuils 80 / 90 |
 | 5 | Mémoire | Saturation | les défauts de page majeurs par seconde (`node_vmstat_pgmajfault`) | Time series |
-| 6 | Disque | Utilisation | le % d'espace utilisé par point de montage, sans tmpfs ni overlay | Bar gauge ; Percent ; seuils 75 / 90 |
+| 6 | Disque | Utilisation | le % d'espace utilisé par point de montage, sans tmpfs ni overlay | Bar gauge ; Percent (0-100) ; légende `{{mountpoint}}` ; seuils 75 / 90 |
 | 7 | Disque | Saturation | le temps d'occupation des disques (`node_disk_io_time_seconds_total`), en % | Time series ; Percent (0.0-1.0) |
-| 8 | Réseau | Erreurs | les erreurs réseau en réception et émission, par interface | Time series ; cachez `lo` |
+| 8 | Réseau | Erreurs | les erreurs réseau en réception et émission, par interface | Time series ; légende `{{device}}` ; sans `lo` |
 | 9 | Cibles | Disponibilité | `up`, une ligne par cible | State timeline ; *Value mappings* 1 → UP vert, 0 → DOWN rouge |
 
 *Le piège du panel 2 : l'IA propose souvent `node_load1 / count(node_cpu_seconds_total{mode="idle"})`.
@@ -434,7 +446,8 @@ inhibit_rules:
     equal: ["team"]
 ```
 
-`./lab.sh check`, `./lab.sh reload`. Puis `./lab.sh chaos errors on` **et**
+`./lab.sh check`, `./lab.sh reload`. Puis `./lab.sh chaos errors on` ; attendez que
+`ShopHighErrorRate` soit *Firing* dans Prometheus → **Alerts** (environ 1 min 30), **puis**
 `./lab.sh chaos latency on`. Au bout de deux minutes :
 `docker compose exec alertmanager amtool alert query --inhibited` : `ShopCheckoutSlow` est là,
 mais n'a rien envoyé (vérifiez l'Inbox et Mailpit).
@@ -562,7 +575,7 @@ déclenché aucune alerte**.
 8. Alertmanager ou Grafana pour une alerte sur une requête SQL ? Et pour une alerte qui doit
    survivre à une panne de Grafana ?
 
-> Score : … / 20
+> Score : … (12 pour les incidents, 2 de bonus, 8 pour les questions : 22 au maximum)
 
 ---
 
@@ -605,7 +618,7 @@ Chaque combinaison de labels est une série à part : jamais d'identifiant uniqu
 | Counter | ce qui ne fait que monter | `rate()`, `increase()` | `http_requests_total` |
 | Gauge | un niveau qui monte et descend | tel quel, `avg_over_time()` | `shop_stock_units` |
 | Histogram | une répartition, en buckets | `histogram_quantile()` | `http_request_duration_seconds` |
-| Summary | des quantiles calculés par l'application | tels quels, non agrégeables | `shop_payment_duration_seconds` |
+| Summary | une durée résumée par l'application (`_sum`, `_count`, et des quantiles selon la bibliothèque : le client Python n'en calcule pas) | `_sum / _count`, quantiles non agrégeables | `shop_payment_duration_seconds` |
 
 **Les exporters** traduisent ce qui ne parle pas Prometheus : Node Exporter (la machine),
 Blackbox (les sondes de l'extérieur), redis_exporter, et des centaines d'autres. La
@@ -662,9 +675,8 @@ variables ; des annotations ; des liens vers le niveau suivant ; rangé, et en c
 | Tester | `promtool test rules`, `amtool config routes test` | *Preview*, *Test* sur le contact point |
 
 **Teams en 2026** : plus de « connecteur Incoming Webhook ». Dans Teams, un **workflow** créé à
-partir du modèle « Post to a channel when a webhook request is received » (dans le menu
-*Workflows* de Teams, il apparaît aussi sous le nom « Send webhook alerts to a channel ») donne
-une adresse. On la colle dans le
+partir du modèle « Send webhook alerts to a channel » (canal → ⋯ → *Workflows*), puis
+« Copier le lien du webhook », donne une adresse. On la colle dans le
 contact point *Microsoft Teams* de Grafana, ou dans `msteamsv2_configs` de l'Alertmanager.
 L'adresse est un secret.
 
@@ -812,7 +824,7 @@ Azure Monitor).
 
 ## Annexe — Requêtes de secours
 
-À n'utiliser qu'après avoir essayé avec l'IA. Toutes filtrent sur la variable du dashboard.
+À n'utiliser qu'après avoir essayé avec l'IA. Copiez-les depuis le **PDF** (dans le Markdown brut, le `\|` du TP B n° 6 doit devenir `|`).
 
 **TP A — Boutique**
 

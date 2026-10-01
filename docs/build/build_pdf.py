@@ -383,6 +383,8 @@ if __name__ == "__main__":
         build_stagiaire("3-pratique", "Jour 3, version pratique", "Guide-stagiaire-Jour-3-pratique.pdf")
     if what in ("all", "jour3"):
         build_formateur_jour3()
+    if what in ("all", "stagiaire", "jour3"):
+        build_stagiaire("3-corriges", "Jour 3, corrigés", "Guide-stagiaire-Jour-3-corriges.pdf")
     if what in ("express", "jour3"):
         build_stagiaire("3-pratique", "Jour 3, version pratique", "Guide-stagiaire-Jour-3-pratique.pdf")
     if what in ("all", "sessions"):

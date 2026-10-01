@@ -12,7 +12,7 @@ module.exports = {
 
 "[statement] Aujourd'hui, vous ne codez pas": `« Vous êtes des gens d'infrastructure. Lundi, ce n'est pas vous qui instrumenterez les applications : ce sont vos développeurs. Et PromQL, je vous l'ai dit, une IA l'écrit très bien. Mais une IA se trompe avec beaucoup d'assurance. Donc la compétence d'aujourd'hui, ce n'est pas d'écrire du PromQL : c'est de le demander, de le comprendre, et de le vérifier. Je vous demanderai à chaque fois de faire expliquer la requête par l'IA : l'objectif, c'est que vous sachiez ce que fait chaque ligne. »
 
-Je laisse la phrase affichée trois secondes de silence. Elle donne le ton de la journée.`,
+Je laisse la phrase affichée, avec trois secondes de silence. Elle donne le ton de la journée.`,
 
 "Le programme du jour": `« Quatre parties. Ce matin, les tableaux de bord : d'abord les bonnes métriques, puis deux dashboards, un pour le service, un pour la machine, puis vous notez votre travail. Cet après-midi, l'alerting, deux fois : avec Prometheus et l'Alertmanager, puis avec Grafana, pour que vous sentiez la différence dans vos mains. Avec des vrais messages : Teams, Slack, e-mail. Et on finit par un jeu : un escape game, la boutique a été sabotée, à vous de trouver les deux pannes. »
 
@@ -52,9 +52,9 @@ La règle de sécurité, lentement : « Chez un assureur, on ne colle jamais de 
 
 À droite, vérifier. Un : ça s'exécute. Deux : l'ordre de grandeur ; si l'IA vous donne 60 000 requêtes par seconde sur notre petite boutique, elle a oublié un rate. Trois : un compteur est toujours dans un rate ou un increase. Quatre, le plus important : je casse et je regarde. Une requête qui n'a jamais vu une panne n'est pas vérifiée. »`,
 
-"EXPLORE · Échauffement : les quatre signaux": `« Dix minutes. Une requête par signal doré, pour toute la boutique, dans Explore. L'IA l'écrit et l'explique, vous la vérifiez, et vous écrivez dans votre guide, avec vos mots, ce qu'elle fait. »
+"EXPLORE · Échauffement : les quatre signaux": `« Sept minutes. Une requête par signal doré, pour toute la boutique, dans Explore. L'IA l'écrit et l'explique, vous la vérifiez, et vous écrivez dans votre guide, avec vos mots, ce qu'elle fait. »
 
-Je circule. Je fais lire deux explications à voix haute à la fin. Les pièges sont sur la slide : je les montre seulement à la correction.
+Je circule. Je fais lire deux explications à voix haute à la fin. Les pièges sont sur la slide : je les commente à la correction.
 
 Valeurs attendues : trafic 6 à 7 req/s ; erreurs 0 ; p95 0,15 à 0,25 s ; CPU quelques %.`,
 
@@ -98,7 +98,7 @@ Au débrief, je fais lever les mains : qui a 8 ou plus ? Puis les deux critères
 
 La partie 6, je la fais en démonstration : ./jour3.sh teams avec l'URL du workflow de la salle, chaos errors, et le message arrive dans le Teams projeté.`,
 
-"Teams en 2026 : un workflow, une adresse": `« Point important pour vous, puisque vous utilisez Teams. Pendant des années, on créait un "connecteur Incoming Webhook" dans un canal. Microsoft l'a remplacé par les workflows. Dans Teams : le canal, les trois points, Workflows, et le modèle "Send webhook alerts to a channel", qui s'appelle aussi "Post to a channel when a webhook request is received". Vous nommez le workflow, vous choisissez l'équipe et le canal, et Teams vous donne une adresse. »
+"Teams en 2026 : un workflow, une adresse": `« Point important pour vous, puisque vous utilisez Teams. Pendant des années, on créait un "connecteur Incoming Webhook" dans un canal. Microsoft l'a remplacé par les workflows. Dans Teams : le canal, les trois points, Workflows, et le modèle "Send webhook alerts to a channel", qui s'appelle aussi "Post to a channel when a webhook request is received". Vous vérifiez l'équipe et le canal, Enregistrer, puis "Copier le lien du webhook" : c'est l'adresse. »
 
 « Cette adresse est un secret : quiconque l'a peut écrire dans votre canal. Donc dans Grafana, on la colle dans un contact point Microsoft Teams. Dans l'Alertmanager, on la met dans un fichier à part, webhook_url_file, qui ne part pas dans Git. Au lab, la commande ./jour3.sh teams fait exactement ça. »
 
@@ -112,7 +112,7 @@ Si la politique de l'entreprise bloque les workflows : un webhook vers un servic
 
 « Le moment que j'attends depuis ce matin : chacun crée un contact point Microsoft Teams avec l'adresse du canal de la salle, et clique sur Test. Regardez l'écran. » Les messages arrivent les uns après les autres dans le Teams projeté. Effet garanti.
 
-La règle métier se déclenche avec ./lab.sh traffic 1 : le chiffre d'affaires tombe d'environ 170 000 à 20 000 € par heure en deux minutes.`,
+La règle métier se déclenche avec ./lab.sh traffic 1 : le chiffre d'affaires tombe d'environ 180 000 € par heure à moins de 40 000 en deux à trois minutes.`,
 
 "Le niveau suivant : alerter sur un budget d'erreur": `Je le présente pour qu'ils sachent que ça existe, on ne le pratique pas.
 
@@ -147,3 +147,5 @@ Tour de table éclair : un service chacun, à voix haute. Puis : « Mardi matin,
 // Jour 3 : pas d'audit de fichier, les règles se retrouvent dans les checklists du guide
 module.exports["Configurer Prometheus proprement"] = base["Configurer Prometheus proprement"]
   .replace("Six règles de configuration, que vous allez chercher dans un fichier réel dans dix minutes.", "Six règles de configuration. Vous les retrouverez en checklist à la fin de votre guide, à cocher avant chaque mise en production.");
+module.exports["Ce qui rend un dashboard lisible"] = base["Ce qui rend un dashboard lisible"].replace("je les applique dans les deux TP de l'après-midi", "je les applique dans les deux TP de ce matin");
+module.exports["Configurer Prometheus proprement"] = module.exports["Configurer Prometheus proprement"].replace("c'est ce qui a permis à Thanos de dédupliquer", "c'est ce qui permettra à Thanos de dédupliquer, tout à l'heure");
