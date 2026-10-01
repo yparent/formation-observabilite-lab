@@ -1,13 +1,38 @@
-# Règles d'enregistrement (recording rules) — Jour 2, TP 3.
-#
-# Convention de nommage : niveau:metrique:operations
-#   ex. job:http_requests:rate5m  = somme par job du rate 5 min des requêtes
-#
-# Vérifier :  docker compose exec prometheus promtool check rules /etc/prometheus/rules/recording.yml
-# Recharger : curl -X POST http://localhost:9090/-/reload
-
+# Jour 3 : règles d'enregistrement (recording rules), déjà en place
 groups:
   - name: shop_api_recording
     interval: 15s
-    rules: []
-      # À compléter pendant le TP 3
+    rules:
+      # Débit par instance et par route
+      - record: instance_route:http_requests:rate5m
+        expr: sum by (instance, route) (rate(http_requests_total{job="shop-api"}[5m]))
+
+      # Débit total du job
+      - record: job:http_requests:rate5m
+        expr: sum by (job) (rate(http_requests_total{job="shop-api"}[5m]))
+
+      # Taux d'erreur 5xx (ratio 0..1) par instance
+      - record: instance:http_errors:ratio_rate5m
+        expr: |
+          sum by (instance) (rate(http_requests_total{job="shop-api", status=~"5.."}[5m]))
+          /
+          sum by (instance) (rate(http_requests_total{job="shop-api"}[5m]))
+
+      # Latence p95 par route (histogramme agrégé sur les deux instances)
+      - record: route:http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket{job="shop-api", route=~"/api/.*"}[5m])))
+
+      # Chiffre d'affaires par heure (euros/h), toutes instances
+      - record: job:shop_revenue_euros:rate1h
+        expr: sum by (job) (rate(shop_revenue_euros_total[1h])) * 3600
+
+  - name: node_recording
+    interval: 30s
+    rules:
+      # CPU utilisé en % par instance (100 - idle)
+      - record: instance:node_cpu_utilisation:ratio_rate5m
+        expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))
+
+      # Mémoire utilisée en %
+      - record: instance:node_memory_utilisation:ratio
+        expr: 1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes

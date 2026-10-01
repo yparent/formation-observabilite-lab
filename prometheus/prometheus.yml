@@ -1,16 +1,7 @@
-# ---------------------------------------------------------------------------
-# Configuration Prometheus du lab (version conteneur, à partir de l'exercice 1.7)
-#
-# Après chaque modification :
-#   1. valider   : docker compose exec prometheus promtool check config /etc/prometheus/prometheus.yml
-#   2. recharger : curl -X POST http://localhost:9090/-/reload
-#
-# Ce fichier grossit au fil des TP. Au départ, Prometheus ne surveille que lui-même.
-# ---------------------------------------------------------------------------
-
+# Jour 3 : prometheus.yml complet (six jobs, recording rules, Alertmanager branché)
 global:
-  scrape_interval: 15s        # fréquence de collecte par défaut
-  evaluation_interval: 15s    # fréquence d'évaluation des règles (recording + alertes)
+  scrape_interval: 15s
+  evaluation_interval: 15s
   external_labels:
     cluster: formation
     replica: prom-1
@@ -18,22 +9,69 @@ global:
 rule_files:
   - rules/*.yml
 
-# Décommenté à l'exercice 3.0 (jour 3), quand la brique 06-alerting est active
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: ["alertmanager:9093"]
+# Alertes envoyées à l'Alertmanager (brique 06), activé par le rattrapage du jeudi
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 
 scrape_configs:
 
-  # Prometheus se surveille lui-même
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
 
-  # --- Jour 1 / TP 1 : job "node"          -> node-exporter:9100 ----------------
-  # --- Jour 1 / TP 2 : job "shop-api"      -> shop-api-1:5000, shop-api-2:5000
-  #                     job "redis"         -> redis-exporter:9121
-  #                     job "blackbox-http" -> module http_2xx, relabeling vers blackbox-exporter:9115
-  #                     job "pushgateway"   -> file_sd_configs sur targets/*.yml, honor_labels: true
-  # ---------------------------------------------------------------------------
+  - job_name: shop-api
+    static_configs:
+      - targets: ["shop-api-1:5000", "shop-api-2:5000"]
+        labels:
+          env: formation
+          team: boutique
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # TP 2 — exporter tiers
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # TP 2 partie 5 — Pushgateway par découverte de fichier (targets/pushgateway.yml).
+  # honor_labels garde le job/instance poussés par le batch.
+  - job_name: pushgateway
+    honor_labels: true
+    file_sd_configs:
+      - files: ["targets/*.yml"]
+        refresh_interval: 30s
+
+  # TP 2 — sondes Blackbox : la cible réelle passe en paramètre "target",
+  # et l'adresse scrapée est réécrite vers l'exporter.
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://shop-api-1:5000/health
+          - http://shop-api-2:5000/health
+          - http://grafana:3000/api/health
+          - https://prometheus.io
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Exercice 1.8 (bonus) : relabeling — on retire les métriques internes du Node Exporter.
+  # À retirer après la comparaison : deux jobs sur la même cible dupliquent toutes les séries
+  # (et les dashboards du jour 2 afficheraient tout en double).
+  # - job_name: node-light
+  #   static_configs:
+  #     - targets: ["node-exporter:9100"]
+  #   metric_relabel_configs:
+  #     - source_labels: [__name__]
+  #       regex: "go_.*|process_.*|promhttp_.*"
+  #       action: drop

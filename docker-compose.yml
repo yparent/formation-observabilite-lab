@@ -9,24 +9,24 @@
 
 include:
   # Jour 1 — exercice 1.7 : on passe des binaires aux conteneurs
-  # - compose/01-prometheus.yml
-  # - compose/02-grafana.yml
+  - compose/01-prometheus.yml
+  - compose/02-grafana.yml
 
   # Jour 1 — TP 1
-  # - compose/04-node-exporter.yml
+  - compose/04-node-exporter.yml
 
   # Jour 1 — TP 2
-  # - compose/03-shop-api.yml
-  # - compose/05-exporters.yml
+  - compose/03-shop-api.yml
+  - compose/05-exporters.yml
 
   # Jour 3 — exercice 3.0
-  # - compose/06-alerting.yml
+  - compose/06-alerting.yml
 
   # Jour 3 — TP 10
   # - compose/07-thanos.yml
 
   # Jour 3 — notifications par e-mail (Mailpit)
-  # - compose/09-mail.yml
+  - compose/09-mail.yml
 
   # Optionnel
   # - compose/08-cadvisor.yml

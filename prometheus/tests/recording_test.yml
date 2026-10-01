@@ -1,0 +1,17 @@
+# Jour 3 : tests unitaires des recording rules (./lab.sh test)
+rule_files:
+  - ../rules/recording.yml
+
+evaluation_interval: 15s
+
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="shop-api", instance="a", route="/", method="GET", status="200"}'
+        values: "0+10x40"
+    promql_expr_test:
+      - expr: job:http_requests:rate5m
+        eval_time: 5m
+        exp_samples:
+          - labels: 'job:http_requests:rate5m{job="shop-api"}'
+            value: 0.6666666666666666

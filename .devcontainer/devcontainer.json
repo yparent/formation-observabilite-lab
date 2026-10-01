@@ -78,5 +78,6 @@
       "label": "Mailpit (e-mails)"
     }
   },
-  "postCreateCommand": "chmod +x lab.sh install/download.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask"
+  "postCreateCommand": "chmod +x lab.sh install/download.sh && sudo apt-get update && sudo apt-get install -y jq && pip install --user prometheus-client flask",
+  "postAttachCommand": "echo; echo '  Jour 3 : tapez   ./jour3.sh start   pour démarrer le lab'; echo"
 }

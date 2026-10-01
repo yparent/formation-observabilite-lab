@@ -1,0 +1,5 @@
+# Jour 3 : la Pushgateway, découverte par fichier (file_sd)
+# Relu automatiquement par Prometheus (file_sd_configs), sans reload.
+- targets: ["pushgateway:9091"]
+  labels:
+    tier: outils

@@ -1,3 +1,32 @@
+# Formation Prometheus & Grafana — Jour 3, version pratique
+
+[![Ouvrir dans GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/yparent/formation-observabilite-lab/tree/jour3)
+
+Cette branche, `jour3`, contient le lab **déjà monté** : l'application instrumentée, Prometheus
+avec ses six jobs, Grafana, l'Alertmanager, l'Inbox (qui joue Teams et Slack) et Mailpit (les
+e-mails). Rien à configurer.
+
+1. Ouvrez https://codespaces.new/yparent/formation-observabilite-lab/tree/jour3 et cliquez sur
+   **Create codespace** (branche `jour3`).
+2. Dans le terminal du Codespace :
+
+```bash
+./jour3.sh start
+```
+
+3. Attendez `10 / 10 cibles UP`. Le guide du jour : `docs/stagiaire/Guide-stagiaire-Jour-3-pratique.pdf`
+   (ou `docs/stagiaire/jour-3-pratique.md`).
+
+| Commande | Ce qu'elle fait |
+|---|---|
+| `./jour3.sh start` | démarre tout et vérifie les dix cibles |
+| `./jour3.sh teams 'URL'` / `teams off` | envoie les alertes critiques vers un vrai canal Teams, ou revient à l'Inbox |
+| `./jour3.sh mystere` / `solution` | l'escape game : deux sabotages secrets, puis la solution |
+| `./jour3.sh repare` | remet la boutique en ordre |
+| `./jour3.sh thanos on` / `off` | ajoute ou retire Thanos |
+
+---
+
 # Formation Prometheus & Grafana — le lab
 
 Bienvenue. Ce dépôt contient tout l'environnement technique de la formation (3 jours) :
