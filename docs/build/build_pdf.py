@@ -358,6 +358,20 @@ def build_formateur_jour3():
           "Formation Prometheus & Grafana", "Guide formateur · Jour 3 pratique")
 
 
+def build_correction_jour3():
+    """Guide de correction et de démonstration du jour 3 (branche jour3-corrige)."""
+    src = DOCS / "formateur" / "jour3" / "correction-demos-jour3.md"
+    m = re.match(r"# (.*?)\n\n(.*)", src.read_text(), flags=re.S)
+    title, rest = m.groups()
+    body = postprocess(md_to_html("# " + title + "\n\n" + rest))
+    build("correction-jour3", DOCS / "formateur" / "jour3" / "Correction-et-demos-Jour-3.pdf",
+          "Formation Prometheus &amp; Grafana",
+          "Jour 3 — corriger et démontrer : les étapes, ce que je montre, ce que je dis, les réponses",
+          "Support formateur · branche jour3-corrige", body,
+          "<strong>Yohan Parent</strong> · Architecte cloud, formateur", "<strong>TP A à D</strong> · escape game",
+          "Formation Prometheus & Grafana", "Correction · Jour 3")
+
+
 def build_session(name: str):
     """Déroulé d'une session client : docs/formateur/sessions/<name>.md → PDF à côté."""
     src = DOCS / "formateur" / "sessions" / f"{name}.md"
@@ -383,6 +397,8 @@ if __name__ == "__main__":
         build_stagiaire("3-pratique", "Jour 3, version pratique", "Guide-stagiaire-Jour-3-pratique.pdf")
     if what in ("all", "jour3"):
         build_formateur_jour3()
+    if what in ("all", "jour3", "correction"):
+        build_correction_jour3()
     if what in ("all", "stagiaire", "jour3"):
         build_stagiaire("3-corriges", "Jour 3, corrigés", "Guide-stagiaire-Jour-3-corriges.pdf")
     if what in ("express", "jour3"):
