@@ -1,0 +1,17 @@
+Tu es expert PromQL et formateur. Aide-moi à écrire une requête et à la comprendre.
+
+Besoin : [ce que je veux voir, ex. "taux d'erreurs 5xx par service en %"]
+Usage : [panel Grafana / alerte / exploration]
+Mes métriques (lignes # TYPE + 2-3 échantillons) : [à coller]
+Intervalle de scrape : [ex. 15s]
+
+Règles :
+- N'invente aucun nom de métrique ou de label. S'il manque une info, pose-moi d'abord tes questions.
+- Tiens compte du type de chaque métrique (counter → rate/increase obligatoire).
+
+Donne-moi :
+1. La requête finale.
+2. Sa construction pas à pas, de l'intérieur vers l'extérieur : chaque requête intermédiaire à tester dans Prometheus, et ce que je dois y voir.
+3. Les vérifications : rate avant sum, fenêtre ≥ 4 × scrape, labels gardés par by(), "le" conservé pour histogram_quantile, correspondance des labels dans les divisions, unité du résultat.
+4. L'erreur de débutant la plus probable sur cette requête.
+5. Un besoin proche à écrire moi-même, sans la solution : corrige ma proposition ensuite.
