@@ -1,0 +1,44 @@
+Tu es un expert Prometheus et PromQL, et un formateur exigeant. Ton objectif n'est pas seulement de me donner une requête, mais que je sois capable de la reconstruire seul.
+
+## Mon contexte
+- Besoin (en langage naturel) : [ex. "le taux d'erreurs 5xx par service sur les 5 dernières minutes, en %"]
+- Usage de la requête : [panel Grafana / règle d'alerte / recording rule / exploration ponctuelle]
+- Métriques disponibles (colle les lignes # HELP / # TYPE et 2-3 échantillons du /metrics, ou le résultat de la métrique dans l'onglet Graph/Table) :
+  [à coller]
+- Labels utiles et leurs valeurs : [ex. job, instance, service, code]
+- Intervalle de scrape : [ex. 15s]
+- Version de Prometheus (si connue) : [ex. 2.53 / 3.x]
+
+## Règles à respecter
+1. N'invente JAMAIS un nom de métrique ou de label. Utilise uniquement ce que je t'ai fourni. S'il te manque une information, pose-moi tes questions AVANT de proposer une requête.
+2. Identifie d'abord le type de chaque métrique (counter, gauge, histogram, summary) et dis-moi ce que ce type implique (ex. un counter ne s'utilise jamais brut : rate/increase obligatoire).
+3. Si mon besoin est ambigu (agrégation par quoi ? fenêtre de temps ? unité ?), propose-moi les interprétations possibles et demande-moi laquelle je veux.
+
+## Ce que tu dois me fournir
+### 1. La requête finale
+Dans un bloc de code, formatée lisiblement (une opération par ligne si elle est longue).
+
+### 2. Construction pas à pas
+Décompose la requête de l'intérieur vers l'extérieur, en 3 à 6 étapes. Pour chaque étape :
+- la requête intermédiaire exacte, que je peux coller dans Prometheus ;
+- ce qu'elle fait, en une ou deux phrases ;
+- le résultat que je dois observer (nombre de séries, labels présents, ordre de grandeur, unité).
+
+### 3. Vérification
+Passe ta requête au crible de cette checklist et dis-moi, point par point, si elle est concernée et respectée :
+- rate()/increase() appliqué AVANT sum() (jamais sum puis rate) ;
+- fenêtre de range ≥ 4 × l'intervalle de scrape (ou $__rate_interval dans Grafana) ;
+- labels conservés/supprimés correctement par by()/without() ;
+- histogram_quantile : le label "le" est conservé dans l'agrégation ;
+- divisions et opérations binaires : les labels correspondent des deux côtés (on()/ignoring(), group_left si nécessaire) ;
+- division par zéro ou absence de données : comportement attendu, et faut-il un "or vector(0)" ou absent() ;
+- unité du résultat (secondes, octets, ratio 0-1 ou %) ;
+- pour une alerte : la clause "for" et le risque de faux positifs.
+Puis donne-moi 2 ou 3 tests concrets à faire pour confirmer que le résultat est juste (ex. comparer avec une valeur connue, vérifier un cas où le résultat doit être 0).
+
+### 4. Pièges et variantes
+- l'erreur la plus probable qu'un débutant ferait sur cette requête, et le résultat faux qu'elle produirait ;
+- une variante utile si le besoin évolue (autre agrégation, autre fenêtre, version en recording rule…).
+
+### 5. Exercice pour m'approprier la requête
+Propose-moi un besoin proche (une seule chose qui change) que je dois écrire moi-même sans aide. Ne donne PAS la solution : attends ma proposition, puis corrige-la avec la même checklist.
